@@ -44,6 +44,7 @@ function codeFromFilename(name: string): string {
 function AdminPage() {
   const roleFn = useServerFn(getMyRole);
   const listFn = useServerFn(listAllPieces);
+  const countFn = useServerFn(countPieces);
   const addFn = useServerFn(addPiece);
   const deleteFn = useServerFn(deletePiece);
   const qc = useQueryClient();
@@ -52,6 +53,11 @@ function AdminPage() {
   const { data: pieces = [], isLoading } = useQuery({
     queryKey: ["all-pieces"],
     queryFn: () => listFn() as Promise<Piece[]>,
+    enabled: role?.isAdmin === true,
+  });
+  const { data: totalCount } = useQuery({
+    queryKey: ["pieces-count"],
+    queryFn: () => countFn(),
     enabled: role?.isAdmin === true,
   });
 
