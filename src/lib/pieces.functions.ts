@@ -94,6 +94,16 @@ export const listAllPieces = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+export const countPieces = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { count, error } = await context.supabase
+      .from("pieces")
+      .select("*", { count: "exact", head: true });
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  });
+
 export const addPiece = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
