@@ -88,7 +88,7 @@ function ConsultaPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
-      const rows = (await searchImage({ data: { imageDataUrl: dataUrl, limit: 24 } })) as Piece[];
+      const rows = (await searchImage({ data: { imageDataUrl: dataUrl, limit: 24, category: category || undefined } })) as Piece[];
       setResults(rows);
       hydrateUrls(rows);
     } catch (err) {
