@@ -23,8 +23,15 @@ type Piece = {
   code: string;
   name: string | null;
   image_path: string;
+  category: string | null;
   created_at: string;
 };
+
+const CATEGORIES = [
+  { value: "anel", label: "Anéis" },
+  { value: "pingente", label: "Pingentes" },
+] as const;
+
 
 async function fileToDataUrl(file: File): Promise<string> {
   return await new Promise((res, rej) => {
