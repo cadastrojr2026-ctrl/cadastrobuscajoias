@@ -48,6 +48,8 @@ function ConsultaPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+  const [category, setCategory] = useState<string>("");
+
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
     const paths = rows.map((r) => r.image_path);
