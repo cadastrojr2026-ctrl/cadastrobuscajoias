@@ -121,6 +121,7 @@ function AdminPage() {
     }
     setUploading(false);
     qc.invalidateQueries({ queryKey: ["all-pieces"] });
+    qc.invalidateQueries({ queryKey: ["pieces-count"] });
     toast.success("Upload concluído");
   }
 
