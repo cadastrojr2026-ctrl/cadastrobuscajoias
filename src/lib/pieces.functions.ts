@@ -37,20 +37,28 @@ async function embedImage(dataUrl: string, hint: string): Promise<number[]> {
 export const searchByImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ imageDataUrl: z.string().min(20), limit: z.number().min(1).max(48).default(24) }).parse(i),
+    z
+      .object({
+        imageDataUrl: z.string().min(20),
+        limit: z.number().min(1).max(48).default(24),
+        category: z.string().optional(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const emb = await embedImage(data.imageDataUrl, "Jewelry ring product photo");
+    const emb = await embedImage(data.imageDataUrl, "Jewelry product photo");
     const { data: matches, error } = await context.supabase.rpc("match_pieces", {
       query_embedding: emb as unknown as string,
       match_count: data.limit,
-    });
+      filter_category: data.category ?? null,
+    } as never);
     if (error) throw new Error(error.message);
     return (matches ?? []) as Array<{
       id: string;
       code: string;
       name: string | null;
       image_path: string;
+      category: string | null;
       similarity: number;
     }>;
   });
@@ -58,18 +66,27 @@ export const searchByImage = createServerFn({ method: "POST" })
 export const searchByText = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ q: z.string().min(1).max(100), limit: z.number().min(1).max(60).default(30) }).parse(i),
+    z
+      .object({
+        q: z.string().min(1).max(100),
+        limit: z.number().min(1).max(60).default(30),
+        category: z.string().optional(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     const q = data.q.trim();
-    const { data: rows, error } = await context.supabase
+    let query = context.supabase
       .from("pieces")
-      .select("id, code, name, image_path")
+      .select("id, code, name, image_path, category")
       .or(`code.ilike.%${q}%,name.ilike.%${q}%`)
       .limit(data.limit);
+    if (data.category) query = query.eq("category", data.category);
+    const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
 
 export const getMyRole = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -85,24 +102,32 @@ export const getMyRole = createServerFn({ method: "GET" })
 
 export const listAllPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((i: unknown) => z.object({ category: z.string().optional() }).optional().parse(i))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
       .from("pieces")
-      .select("id, code, name, image_path, created_at")
+      .select("id, code, name, image_path, category, created_at")
       .order("code", { ascending: true });
+    if (data?.category) query = query.eq("category", data.category);
+    const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return rows ?? [];
   });
 
 export const countPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { count, error } = await context.supabase
-      .from("pieces")
-      .select("*", { count: "exact", head: true });
+    const { data, error } = await context.supabase.from("pieces").select("category");
     if (error) throw new Error(error.message);
-    return count ?? 0;
+    const total = data?.length ?? 0;
+    const byCategory: Record<string, number> = {};
+    for (const r of data ?? []) {
+      const k = r.category ?? "outros";
+      byCategory[k] = (byCategory[k] ?? 0) + 1;
+    }
+    return { total, byCategory };
   });
+
 
 export const addPiece = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -23,8 +23,15 @@ type Piece = {
   code: string;
   name: string | null;
   image_path: string;
+  category: string | null;
   created_at: string;
 };
+
+const CATEGORIES = [
+  { value: "anel", label: "Anéis" },
+  { value: "pingente", label: "Pingentes" },
+] as const;
+
 
 async function fileToDataUrl(file: File): Promise<string> {
   return await new Promise((res, rej) => {
@@ -49,13 +56,16 @@ function AdminPage() {
   const deleteFn = useServerFn(deletePiece);
   const qc = useQueryClient();
 
+  const [filter, setFilter] = useState<string>("");
+  const [uploadCategory, setUploadCategory] = useState<string>("anel");
+
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
   const { data: pieces = [], isLoading } = useQuery({
-    queryKey: ["all-pieces"],
-    queryFn: () => listFn() as Promise<Piece[]>,
+    queryKey: ["all-pieces", filter],
+    queryFn: () => listFn({ data: { category: filter || undefined } }) as Promise<Piece[]>,
     enabled: role?.isAdmin === true,
   });
-  const { data: totalCount } = useQuery({
+  const { data: counts } = useQuery({
     queryKey: ["pieces-count"],
     queryFn: () => countFn(),
     enabled: role?.isAdmin === true,
@@ -65,7 +75,6 @@ function AdminPage() {
   useEffect(() => {
     if (pieces.length === 0) return;
     const paths = pieces.map((p) => p.image_path);
-    // signed URLs in chunks of 100
     (async () => {
       const chunks: string[][] = [];
       for (let i = 0; i < paths.length; i += 100) chunks.push(paths.slice(i, i + 100));
@@ -86,11 +95,11 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
-  // Upload state
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<{ name: string; status: "pending" | "ok" | "error"; msg?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+
 
   async function processFiles(files: File[]) {
     if (files.length === 0) return;
@@ -104,7 +113,7 @@ function AdminPage() {
       const code = codeFromFilename(f.name);
       try {
         const dataUrl = await fileToDataUrl(f);
-        await addFn({ data: { code, imageDataUrl: dataUrl, category: "anel" } });
+        await addFn({ data: { code, imageDataUrl: dataUrl, category: uploadCategory } });
         setUploadQueue((prev) => {
           const c = [...prev];
           c[i] = { ...c[i], status: "ok" };
@@ -142,10 +151,34 @@ function AdminPage() {
         <div>
           <h1 className="serif text-3xl gold-text">Painel Admin</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {totalCount ?? pieces.length} peça(s) cadastrada(s)
+            {counts?.total ?? pieces.length} peça(s) no total
+            {counts?.byCategory && Object.keys(counts.byCategory).length > 0 && (
+              <span className="ml-2">
+                (
+                {CATEGORIES.map((c, i) => (
+                  <span key={c.value}>
+                    {i > 0 && " · "}
+                    {c.label}: {counts.byCategory[c.value] ?? 0}
+                  </span>
+                ))}
+                )
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
+          <select
+            value={uploadCategory}
+            onChange={(e) => setUploadCategory(e.target.value)}
+            disabled={uploading}
+            className="rounded-md bg-card border border-border px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--gold)]"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                Categoria: {c.label}
+              </option>
+            ))}
+          </select>
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
@@ -171,6 +204,33 @@ function AdminPage() {
           />
         </div>
       </div>
+
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button
+          onClick={() => setFilter("")}
+          className={`rounded-full px-4 py-1.5 text-xs border transition ${
+            filter === ""
+              ? "gold-gradient text-primary-foreground border-transparent"
+              : "border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Todas
+        </button>
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.value}
+            onClick={() => setFilter(c.value)}
+            className={`rounded-full px-4 py-1.5 text-xs border transition ${
+              filter === c.value
+                ? "gold-gradient text-primary-foreground border-transparent"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
 
       {uploading && (
         <div className="mb-6 rounded-lg border border-[color:var(--gold)]/40 bg-card p-4">

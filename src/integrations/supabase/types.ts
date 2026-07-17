@@ -86,16 +86,32 @@ export type Database = {
         }
         Returns: boolean
       }
-      match_pieces: {
-        Args: { match_count?: number; query_embedding: string }
-        Returns: {
-          code: string
-          id: string
-          image_path: string
-          name: string
-          similarity: number
-        }[]
-      }
+      match_pieces:
+        | {
+            Args: { match_count?: number; query_embedding: string }
+            Returns: {
+              code: string
+              id: string
+              image_path: string
+              name: string
+              similarity: number
+            }[]
+          }
+        | {
+            Args: {
+              filter_category?: string
+              match_count?: number
+              query_embedding: string
+            }
+            Returns: {
+              category: string
+              code: string
+              id: string
+              image_path: string
+              name: string
+              similarity: number
+            }[]
+          }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -16,8 +16,16 @@ type Piece = {
   code: string;
   name: string | null;
   image_path: string;
+  category?: string | null;
   similarity?: number;
 };
+
+const CATEGORIES = [
+  { value: "", label: "Todas" },
+  { value: "anel", label: "Anéis" },
+  { value: "pingente", label: "Pingentes" },
+] as const;
+
 
 async function fileToDataUrl(file: File): Promise<string> {
   return await new Promise((res, rej) => {
@@ -40,6 +48,8 @@ function ConsultaPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+  const [category, setCategory] = useState<string>("");
+
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
     const paths = rows.map((r) => r.image_path);
@@ -58,7 +68,7 @@ function ConsultaPage() {
     setMode("text");
     setPreview(null);
     try {
-      const rows = (await searchText({ data: { q: q.trim(), limit: 40 } })) as Piece[];
+      const rows = (await searchText({ data: { q: q.trim(), limit: 40, category: category || undefined } })) as Piece[];
       setResults(rows);
       hydrateUrls(rows);
     } catch (err) {
@@ -78,7 +88,7 @@ function ConsultaPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
-      const rows = (await searchImage({ data: { imageDataUrl: dataUrl, limit: 24 } })) as Piece[];
+      const rows = (await searchImage({ data: { imageDataUrl: dataUrl, limit: 24, category: category || undefined } })) as Piece[];
       setResults(rows);
       hydrateUrls(rows);
     } catch (err) {
@@ -103,6 +113,24 @@ function ConsultaPage() {
           Envie uma foto ou digite o código da peça
         </p>
       </div>
+
+      <div className="flex gap-2 justify-center mb-6 flex-wrap">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.value || "all"}
+            onClick={() => setCategory(c.value)}
+            className={`rounded-full px-4 py-1.5 text-xs border transition ${
+              category === c.value
+                ? "gold-gradient text-primary-foreground border-transparent"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+
 
       <div className="grid md:grid-cols-2 gap-3 max-w-3xl mx-auto">
         <form onSubmit={doTextSearch} className="relative">
