@@ -142,7 +142,7 @@ function AdminPage() {
         <div>
           <h1 className="serif text-3xl gold-text">Painel Admin</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {pieces.length} peça(s) cadastrada(s)
+            {totalCount ?? pieces.length} peça(s) cadastrada(s)
           </p>
         </div>
         <div className="flex gap-2">
