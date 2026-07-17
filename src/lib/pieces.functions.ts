@@ -102,24 +102,32 @@ export const getMyRole = createServerFn({ method: "GET" })
 
 export const listAllPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((i: unknown) => z.object({ category: z.string().optional() }).optional().parse(i))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
       .from("pieces")
-      .select("id, code, name, image_path, created_at")
+      .select("id, code, name, image_path, category, created_at")
       .order("code", { ascending: true });
+    if (data?.category) query = query.eq("category", data.category);
+    const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return rows ?? [];
   });
 
 export const countPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { count, error } = await context.supabase
-      .from("pieces")
-      .select("*", { count: "exact", head: true });
+    const { data, error } = await context.supabase.from("pieces").select("category");
     if (error) throw new Error(error.message);
-    return count ?? 0;
+    const total = data?.length ?? 0;
+    const byCategory: Record<string, number> = {};
+    for (const r of data ?? []) {
+      const k = r.category ?? "outros";
+      byCategory[k] = (byCategory[k] ?? 0) + 1;
+    }
+    return { total, byCategory };
   });
+
 
 export const addPiece = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
