@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addPiece,
+  countPieces,
   deletePiece,
   getMyRole,
   listAllPieces,
@@ -43,6 +44,7 @@ function codeFromFilename(name: string): string {
 function AdminPage() {
   const roleFn = useServerFn(getMyRole);
   const listFn = useServerFn(listAllPieces);
+  const countFn = useServerFn(countPieces);
   const addFn = useServerFn(addPiece);
   const deleteFn = useServerFn(deletePiece);
   const qc = useQueryClient();
@@ -51,6 +53,11 @@ function AdminPage() {
   const { data: pieces = [], isLoading } = useQuery({
     queryKey: ["all-pieces"],
     queryFn: () => listFn() as Promise<Piece[]>,
+    enabled: role?.isAdmin === true,
+  });
+  const { data: totalCount } = useQuery({
+    queryKey: ["pieces-count"],
+    queryFn: () => countFn(),
     enabled: role?.isAdmin === true,
   });
 
@@ -74,6 +81,7 @@ function AdminPage() {
     onSuccess: () => {
       toast.success("Peça removida");
       qc.invalidateQueries({ queryKey: ["all-pieces"] });
+      qc.invalidateQueries({ queryKey: ["pieces-count"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -113,6 +121,7 @@ function AdminPage() {
     }
     setUploading(false);
     qc.invalidateQueries({ queryKey: ["all-pieces"] });
+    qc.invalidateQueries({ queryKey: ["pieces-count"] });
     toast.success("Upload concluído");
   }
 
@@ -133,7 +142,7 @@ function AdminPage() {
         <div>
           <h1 className="serif text-3xl gold-text">Painel Admin</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {pieces.length} peça(s) cadastrada(s)
+            {totalCount ?? pieces.length} peça(s) cadastrada(s)
           </p>
         </div>
         <div className="flex gap-2">
