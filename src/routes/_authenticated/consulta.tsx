@@ -123,18 +123,51 @@ function ConsultaPage() {
           </button>
         </form>
 
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={loading}
-          className="rounded-lg border-2 border-dashed border-[color:var(--gold)]/40 bg-card/40 py-3 px-4 text-sm hover:bg-[color:var(--gold)]/10 transition flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <Upload className="h-4 w-4 text-[color:var(--gold)]" />
-          Enviar foto para busca visual
-        </button>
+        {isMobile ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => cameraRef.current?.click()}
+              disabled={loading}
+              className="rounded-lg border-2 border-dashed border-[color:var(--gold)]/40 bg-card/40 py-3 px-3 text-sm hover:bg-[color:var(--gold)]/10 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Camera className="h-4 w-4 text-[color:var(--gold)]" />
+              Tirar foto
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={loading}
+              className="rounded-lg border-2 border-dashed border-[color:var(--gold)]/40 bg-card/40 py-3 px-3 text-sm hover:bg-[color:var(--gold)]/10 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <ImageIcon className="h-4 w-4 text-[color:var(--gold)]" />
+              Da galeria
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={loading}
+            className="rounded-lg border-2 border-dashed border-[color:var(--gold)]/40 bg-card/40 py-3 px-4 text-sm hover:bg-[color:var(--gold)]/10 transition flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Upload className="h-4 w-4 text-[color:var(--gold)]" />
+            Enviar foto para busca visual
+          </button>
+        )}
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) doImageSearch(f);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
