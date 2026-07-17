@@ -38,6 +38,8 @@ function ConsultaPage() {
   const [mode, setMode] = useState<"idle" | "text" | "image">("idle");
   const [preview, setPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
     const paths = rows.map((r) => r.image_path);
