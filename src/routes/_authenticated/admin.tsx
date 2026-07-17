@@ -113,7 +113,7 @@ function AdminPage() {
       const code = codeFromFilename(f.name);
       try {
         const dataUrl = await fileToDataUrl(f);
-        await addFn({ data: { code, imageDataUrl: dataUrl, category: "anel" } });
+        await addFn({ data: { code, imageDataUrl: dataUrl, category: uploadCategory } });
         setUploadQueue((prev) => {
           const c = [...prev];
           c[i] = { ...c[i], status: "ok" };
