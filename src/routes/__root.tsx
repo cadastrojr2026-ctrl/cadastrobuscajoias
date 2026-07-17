@@ -82,10 +82,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "JR Joias Folheadas — Consulta de Peças" },
       {
         property: "og:description",
-        content: "Busca visual de peças por foto ou código para a equipe JR Joias Folheadas.",
+        content: "Catálogo interno da JR Joias Folheadas. Consulte peças por código ou por foto com busca visual inteligente.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "JR Joias Folheadas — Consulta de Peças" },
+      { name: "twitter:description", content: "Catálogo interno da JR Joias Folheadas. Consulte peças por código ou por foto com busca visual inteligente." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/45c9125a-cb2d-47e2-9b43-9c0531c26677" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/45c9125a-cb2d-47e2-9b43-9c0531c26677" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
