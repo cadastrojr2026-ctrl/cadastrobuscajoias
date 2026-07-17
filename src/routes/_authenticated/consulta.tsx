@@ -114,6 +114,24 @@ function ConsultaPage() {
         </p>
       </div>
 
+      <div className="flex gap-2 justify-center mb-6 flex-wrap">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.value || "all"}
+            onClick={() => setCategory(c.value)}
+            className={`rounded-full px-4 py-1.5 text-xs border transition ${
+              category === c.value
+                ? "gold-gradient text-primary-foreground border-transparent"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+
+
       <div className="grid md:grid-cols-2 gap-3 max-w-3xl mx-auto">
         <form onSubmit={doTextSearch} className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
