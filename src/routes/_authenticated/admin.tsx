@@ -81,6 +81,7 @@ function AdminPage() {
     onSuccess: () => {
       toast.success("Peça removida");
       qc.invalidateQueries({ queryKey: ["all-pieces"] });
+      qc.invalidateQueries({ queryKey: ["pieces-count"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
