@@ -68,7 +68,7 @@ function ConsultaPage() {
     setMode("text");
     setPreview(null);
     try {
-      const rows = (await searchText({ data: { q: q.trim(), limit: 40 } })) as Piece[];
+      const rows = (await searchText({ data: { q: q.trim(), limit: 40, category: category || undefined } })) as Piece[];
       setResults(rows);
       hydrateUrls(rows);
     } catch (err) {
