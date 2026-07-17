@@ -56,13 +56,16 @@ function AdminPage() {
   const deleteFn = useServerFn(deletePiece);
   const qc = useQueryClient();
 
+  const [filter, setFilter] = useState<string>("");
+  const [uploadCategory, setUploadCategory] = useState<string>("anel");
+
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
   const { data: pieces = [], isLoading } = useQuery({
-    queryKey: ["all-pieces"],
-    queryFn: () => listFn() as Promise<Piece[]>,
+    queryKey: ["all-pieces", filter],
+    queryFn: () => listFn({ data: { category: filter || undefined } }) as Promise<Piece[]>,
     enabled: role?.isAdmin === true,
   });
-  const { data: totalCount } = useQuery({
+  const { data: counts } = useQuery({
     queryKey: ["pieces-count"],
     queryFn: () => countFn(),
     enabled: role?.isAdmin === true,
@@ -72,7 +75,6 @@ function AdminPage() {
   useEffect(() => {
     if (pieces.length === 0) return;
     const paths = pieces.map((p) => p.image_path);
-    // signed URLs in chunks of 100
     (async () => {
       const chunks: string[][] = [];
       for (let i = 0; i < paths.length; i += 100) chunks.push(paths.slice(i, i + 100));
@@ -93,11 +95,11 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
-  // Upload state
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<{ name: string; status: "pending" | "ok" | "error"; msg?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+
 
   async function processFiles(files: File[]) {
     if (files.length === 0) return;
