@@ -16,8 +16,16 @@ type Piece = {
   code: string;
   name: string | null;
   image_path: string;
+  category?: string | null;
   similarity?: number;
 };
+
+const CATEGORIES = [
+  { value: "", label: "Todas" },
+  { value: "anel", label: "Anéis" },
+  { value: "pingente", label: "Pingentes" },
+] as const;
+
 
 async function fileToDataUrl(file: File): Promise<string> {
   return await new Promise((res, rej) => {
