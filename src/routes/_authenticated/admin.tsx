@@ -151,10 +151,34 @@ function AdminPage() {
         <div>
           <h1 className="serif text-3xl gold-text">Painel Admin</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {totalCount ?? pieces.length} peça(s) cadastrada(s)
+            {counts?.total ?? pieces.length} peça(s) no total
+            {counts?.byCategory && Object.keys(counts.byCategory).length > 0 && (
+              <span className="ml-2">
+                (
+                {CATEGORIES.map((c, i) => (
+                  <span key={c.value}>
+                    {i > 0 && " · "}
+                    {c.label}: {counts.byCategory[c.value] ?? 0}
+                  </span>
+                ))}
+                )
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
+          <select
+            value={uploadCategory}
+            onChange={(e) => setUploadCategory(e.target.value)}
+            disabled={uploading}
+            className="rounded-md bg-card border border-border px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--gold)]"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                Categoria: {c.label}
+              </option>
+            ))}
+          </select>
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
@@ -180,6 +204,33 @@ function AdminPage() {
           />
         </div>
       </div>
+
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button
+          onClick={() => setFilter("")}
+          className={`rounded-full px-4 py-1.5 text-xs border transition ${
+            filter === ""
+              ? "gold-gradient text-primary-foreground border-transparent"
+              : "border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Todas
+        </button>
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.value}
+            onClick={() => setFilter(c.value)}
+            className={`rounded-full px-4 py-1.5 text-xs border transition ${
+              filter === c.value
+                ? "gold-gradient text-primary-foreground border-transparent"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
 
       {uploading && (
         <div className="mb-6 rounded-lg border border-[color:var(--gold)]/40 bg-card p-4">
