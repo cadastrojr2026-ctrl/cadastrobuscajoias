@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
 import { getSignedImageUrls } from "@/lib/storage";
-import { Search, Upload, X, Loader2 } from "lucide-react";
+import { Search, Upload, X, Loader2, Camera, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/_authenticated/consulta")({
   component: ConsultaPage,
