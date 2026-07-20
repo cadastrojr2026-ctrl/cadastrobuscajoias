@@ -46,7 +46,7 @@ export const searchByImage = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const emb = await embedImage(data.imageDataUrl, "Jewelry product photo");
+    const emb = await embedImage(data.imageDataUrl, "Jewelry product photo. Note the stone color (red, blue, green, purple, pink, white, black, etc.) as a key visual feature.");
     const { data: matches, error } = await context.supabase.rpc("match_pieces", {
       query_embedding: emb as unknown as string,
       match_count: data.limit,
