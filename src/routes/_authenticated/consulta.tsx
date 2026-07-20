@@ -6,7 +6,7 @@ import { getSignedImageUrls } from "@/lib/storage";
 import { Search, Upload, X, Loader2, Camera, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { extractColorSig, combinedScore, type ColorSig } from "@/lib/color";
+
 
 export const Route = createFileRoute("/_authenticated/consulta")({
   component: ConsultaPage,
@@ -89,30 +89,11 @@ function ConsultaPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
-      // Pull a wider candidate set so we can re-rank by stone color.
       const rows = (await searchImage({
-        data: { imageDataUrl: dataUrl, limit: 60, category: category || undefined },
+        data: { imageDataUrl: dataUrl, limit: 24, category: category || undefined },
       })) as Piece[];
-
-      // Fetch signed URLs first so we can read pixel data for color re-ranking.
-      const map = await getSignedImageUrls(rows.map((r) => r.image_path));
-      setUrls((prev) => ({ ...prev, ...map }));
-
-      // Extract dominant chromatic color from the query and each candidate.
-      const querySig: ColorSig | null = await extractColorSig(dataUrl);
-      const candSigs = await Promise.all(
-        rows.map((r) => (map[r.image_path] ? extractColorSig(map[r.image_path]) : Promise.resolve(null))),
-      );
-
-      const reranked = rows
-        .map((r, i) => ({
-          ...r,
-          similarity: combinedScore(r.similarity ?? 0, querySig, candSigs[i]),
-        }))
-        .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
-        .slice(0, 24);
-
-      setResults(reranked);
+      setResults(rows);
+      hydrateUrls(rows);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro na busca por imagem");
     } finally {
