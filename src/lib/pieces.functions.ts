@@ -40,7 +40,7 @@ export const searchByImage = createServerFn({ method: "POST" })
     z
       .object({
         imageDataUrl: z.string().min(20),
-        limit: z.number().min(1).max(48).default(24),
+        limit: z.number().min(1).max(80).default(24),
         category: z.string().optional(),
       })
       .parse(i),
