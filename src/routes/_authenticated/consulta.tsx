@@ -318,11 +318,11 @@ function ConsultaPage() {
   );
 }
 
-function PieceCard({ piece, url }: { piece: Piece; url?: string }) {
+function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClick?: () => void }) {
   const sim = piece.similarity != null ? Math.round(piece.similarity * 100) : null;
   return (
     <div className="group rounded-lg overflow-hidden border border-border bg-card hover:border-[color:var(--gold)]/60 transition">
-      <div className="aspect-square bg-background/60 overflow-hidden">
+      <div className="aspect-square bg-background/60 overflow-hidden cursor-pointer" onClick={onClick}>
         {url ? (
           <img
             src={url}
