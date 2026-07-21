@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyRole } from "@/lib/pieces.functions";
+import { getMyApprovalStatus } from "@/lib/approvals.functions";
 import { LogOut, Search, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -20,17 +23,51 @@ function AuthedLayout() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const roleFn = useServerFn(getMyRole);
+  const statusFn = useServerFn(getMyApprovalStatus);
+
+  const { data: approval, isLoading: approvalLoading } = useQuery({
+    queryKey: ["my-approval", user.id],
+    queryFn: () => statusFn(),
+    staleTime: 30_000,
+  });
+
   const { data: roleInfo } = useQuery({
     queryKey: ["my-role", user.id],
     queryFn: () => roleFn(),
     staleTime: 60_000,
+    enabled: approval?.status === "approved",
   });
+
+  // Block non-approved users: sign out and send back to /auth
+  useEffect(() => {
+    if (!approval) return;
+    if (approval.status === "approved") return;
+    (async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await supabase.auth.signOut();
+      const msg =
+        approval.status === "pending"
+          ? "Seu cadastro está aguardando aprovação do administrador."
+          : "Seu acesso foi negado. Entre em contato com o administrador.";
+      toast.error(msg, { duration: 6000 });
+      router.navigate({ to: "/auth", replace: true });
+    })();
+  }, [approval, queryClient, router]);
 
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
     router.navigate({ to: "/auth", replace: true });
+  }
+
+  if (approvalLoading || !approval || approval.status !== "approved") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-sm text-muted-foreground">Verificando acesso...</div>
+      </div>
+    );
   }
 
   return (
