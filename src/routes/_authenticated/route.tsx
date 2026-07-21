@@ -106,6 +106,30 @@ function AuthedLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
+      <ScrollToTop />
     </div>
+  );
+}
+
+function ScrollToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 200);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      aria-label="Voltar ao topo"
+      className="fixed bottom-6 right-6 z-40 rounded-full gold-gradient p-3 shadow-lg shadow-black/30 text-primary-foreground hover:scale-105 transition"
+    >
+      <ArrowUp className="h-5 w-5" />
+    </button>
   );
 }
