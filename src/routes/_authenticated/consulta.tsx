@@ -56,6 +56,8 @@ function ConsultaPage() {
   const isMobile = useIsMobile();
   const [category, setCategory] = useState<string>("");
   const [imageLimit, setImageLimit] = useState<number>(36);
+  const [sortMode, setSortMode] = useState<SortMode>("similar");
+
 
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
