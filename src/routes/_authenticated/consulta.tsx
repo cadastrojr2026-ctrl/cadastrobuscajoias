@@ -317,7 +317,15 @@ function ConsultaPage() {
                   return 0;
                 })
                 .map((p) => (
-                  <PieceCard key={p.id} piece={p} url={urls[p.image_path]} />
+                  <PieceCard
+                    key={p.id}
+                    piece={p}
+                    url={urls[p.image_path]}
+                    onClick={() => {
+                      const url = urls[p.image_path];
+                      if (url) setLightbox({ piece: p, url });
+                    }}
+                  />
                 ))}
             </div>
           </>
