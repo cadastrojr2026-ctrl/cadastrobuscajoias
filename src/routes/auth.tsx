@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { ensureMyApproval, getMyApprovalStatus } from "@/lib/approvals.functions";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -14,12 +16,31 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const ensureFn = useServerFn(ensureMyApproval);
+  const statusFn = useServerFn(getMyApprovalStatus);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/consulta", replace: true });
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      // Check approval before redirecting
+      try {
+        const s = await statusFn();
+        if (s.status === "approved") {
+          navigate({ to: "/consulta", replace: true });
+        } else {
+          await supabase.auth.signOut();
+          toast.error(
+            s.status === "pending"
+              ? "Seu cadastro está aguardando aprovação do administrador."
+              : "Seu acesso foi negado.",
+            { duration: 6000 },
+          );
+        }
+      } catch {
+        // ignore
+      }
     });
-  }, [navigate]);
+  }, [navigate, statusFn]);
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -32,12 +53,36 @@ function AuthPage() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        toast.success("Conta criada! Você já pode acessar.");
+        // Make sure an approval row exists (in case the auth trigger did not run)
+        try {
+          await ensureFn();
+        } catch {
+          // ignore — the admin will still be able to see the user
+        }
+        await supabase.auth.signOut();
+        toast.success(
+          "Cadastro enviado! Aguarde a aprovação do administrador para acessar.",
+          { duration: 8000 },
+        );
+        setMode("signin");
+        setPassword("");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Gate on approval
+        const s = await statusFn();
+        if (s.status !== "approved") {
+          await supabase.auth.signOut();
+          toast.error(
+            s.status === "pending"
+              ? "Seu cadastro ainda está aguardando aprovação do administrador."
+              : "Seu acesso foi negado. Fale com o administrador.",
+            { duration: 8000 },
+          );
+          return;
+        }
+        navigate({ to: "/consulta", replace: true });
       }
-      navigate({ to: "/consulta", replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao autenticar.";
       toast.error(msg);
@@ -54,10 +99,28 @@ function AuthPage() {
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
+      // Ensure approval row (Google first-time sign-in) then gate
+      try {
+        await ensureFn();
+      } catch {
+        // ignore
+      }
+      const s = await statusFn();
+      if (s.status !== "approved") {
+        await supabase.auth.signOut();
+        toast.error(
+          s.status === "pending"
+            ? "Seu cadastro está aguardando aprovação do administrador."
+            : "Seu acesso foi negado.",
+          { duration: 8000 },
+        );
+        return;
+      }
       navigate({ to: "/consulta", replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro no Google.";
       toast.error(msg);
+    } finally {
       setLoading(false);
     }
   }
@@ -147,7 +210,7 @@ function AuthPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          O primeiro usuário cadastrado se torna administrador automaticamente.
+          Novos cadastros precisam ser aprovados pelo administrador antes de acessar.
         </p>
       </div>
     </div>
