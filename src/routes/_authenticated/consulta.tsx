@@ -19,7 +19,10 @@ type Piece = {
   image_path: string;
   category?: string | null;
   similarity?: number;
+  created_at?: string | null;
 };
+
+type SortMode = "similar" | "recent";
 
 const CATEGORIES = [
   { value: "", label: "Todas" },
