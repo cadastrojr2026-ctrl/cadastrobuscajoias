@@ -158,6 +158,29 @@ function ConsultaPage() {
         ))}
       </div>
 
+      {mode === "image" && (
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="text-xs text-muted-foreground">Ordenar por:</span>
+          {([
+            { v: "similar", label: "Mais parecido" },
+            { v: "recent", label: "Mais recente" },
+          ] as const).map((o) => (
+            <button
+              key={o.v}
+              onClick={() => setSortMode(o.v)}
+              className={`rounded-full px-3 py-1 text-xs border transition ${
+                sortMode === o.v
+                  ? "gold-gradient text-primary-foreground border-transparent"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+
 
 
       <div className="grid md:grid-cols-2 gap-3 max-w-3xl mx-auto">
