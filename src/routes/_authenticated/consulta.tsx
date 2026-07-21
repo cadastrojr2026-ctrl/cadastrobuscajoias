@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
 import { getSignedImageUrls } from "@/lib/storage";
@@ -57,6 +57,7 @@ function ConsultaPage() {
   const [category, setCategory] = useState<string>("");
   const [imageLimit, setImageLimit] = useState<number>(36);
   const [sortMode, setSortMode] = useState<SortMode>("similar");
+  const [lightbox, setLightbox] = useState<{ piece: Piece; url: string } | null>(null);
 
 
 
@@ -115,6 +116,15 @@ function ConsultaPage() {
     setQ("");
     setMode("idle");
   }
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -307,21 +317,53 @@ function ConsultaPage() {
                   return 0;
                 })
                 .map((p) => (
-                  <PieceCard key={p.id} piece={p} url={urls[p.image_path]} />
+                  <PieceCard
+                    key={p.id}
+                    piece={p}
+                    url={urls[p.image_path]}
+                    onClick={() => {
+                      const url = urls[p.image_path];
+                      if (url) setLightbox({ piece: p, url });
+                    }}
+                  />
                 ))}
             </div>
           </>
         )}
       </div>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightbox(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Peça ${lightbox.piece.code}`}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 rounded-full bg-card/80 border border-border p-2 text-foreground hover:bg-destructive/20 transition"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={lightbox.url}
+            alt={lightbox.piece.code}
+            className="max-h-[85vh] max-w-[90vw] rounded-lg border border-[color:var(--gold)]/40 object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-function PieceCard({ piece, url }: { piece: Piece; url?: string }) {
+function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClick?: () => void }) {
   const sim = piece.similarity != null ? Math.round(piece.similarity * 100) : null;
   return (
     <div className="group rounded-lg overflow-hidden border border-border bg-card hover:border-[color:var(--gold)]/60 transition">
-      <div className="aspect-square bg-background/60 overflow-hidden">
+      <div className="aspect-square bg-background/60 overflow-hidden cursor-pointer" onClick={onClick}>
         {url ? (
           <img
             src={url}
