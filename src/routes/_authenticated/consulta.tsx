@@ -27,6 +27,8 @@ const CATEGORIES = [
   { value: "pingente", label: "Pingentes" },
 ] as const;
 
+const LIMIT_OPTIONS = [36, 48, 60] as const;
+
 
 async function fileToDataUrl(file: File): Promise<string> {
   return await new Promise((res, rej) => {
@@ -50,6 +52,7 @@ function ConsultaPage() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
   const [category, setCategory] = useState<string>("");
+  const [imageLimit, setImageLimit] = useState<number>(36);
 
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
@@ -90,7 +93,7 @@ function ConsultaPage() {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
       const rows = (await searchImage({
-        data: { imageDataUrl: dataUrl, limit: 36, category: category || undefined },
+        data: { imageDataUrl: dataUrl, limit: imageLimit, category: category || undefined },
       })) as Piece[];
       setResults(rows);
       hydrateUrls(rows);
@@ -129,6 +132,23 @@ function ConsultaPage() {
             }`}
           >
             {c.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-center gap-2 mb-6">
+        <span className="text-xs text-muted-foreground">Resultados por busca:</span>
+        {LIMIT_OPTIONS.map((n) => (
+          <button
+            key={n}
+            onClick={() => setImageLimit(n)}
+            className={`rounded-full px-3 py-1 text-xs border transition ${
+              imageLimit === n
+                ? "gold-gradient text-primary-foreground border-transparent"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {n}
           </button>
         ))}
       </div>
