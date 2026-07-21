@@ -4,9 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyRole } from "@/lib/pieces.functions";
 import { getMyApprovalStatus } from "@/lib/approvals.functions";
-import { LogOut, Search, ShieldCheck } from "lucide-react";
+import { LogOut, Search, ShieldCheck, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
