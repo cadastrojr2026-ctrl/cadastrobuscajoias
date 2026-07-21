@@ -331,6 +331,30 @@ function ConsultaPage() {
           </>
         )}
       </div>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightbox(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Peça ${lightbox.piece.code}`}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 rounded-full bg-card/80 border border-border p-2 text-foreground hover:bg-destructive/20 transition"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={lightbox.url}
+            alt={lightbox.piece.code}
+            className="max-h-[85vh] max-w-[90vw] rounded-lg border border-[color:var(--gold)]/40 object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
