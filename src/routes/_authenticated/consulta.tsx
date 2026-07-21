@@ -19,7 +19,10 @@ type Piece = {
   image_path: string;
   category?: string | null;
   similarity?: number;
+  created_at?: string | null;
 };
+
+type SortMode = "similar" | "recent";
 
 const CATEGORIES = [
   { value: "", label: "Todas" },
@@ -53,6 +56,8 @@ function ConsultaPage() {
   const isMobile = useIsMobile();
   const [category, setCategory] = useState<string>("");
   const [imageLimit, setImageLimit] = useState<number>(36);
+  const [sortMode, setSortMode] = useState<SortMode>("similar");
+
 
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
@@ -152,6 +157,29 @@ function ConsultaPage() {
           </button>
         ))}
       </div>
+
+      {mode === "image" && (
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="text-xs text-muted-foreground">Ordenar por:</span>
+          {([
+            { v: "similar", label: "Mais parecido" },
+            { v: "recent", label: "Mais recente" },
+          ] as const).map((o) => (
+            <button
+              key={o.v}
+              onClick={() => setSortMode(o.v)}
+              className={`rounded-full px-3 py-1 text-xs border transition ${
+                sortMode === o.v
+                  ? "gold-gradient text-primary-foreground border-transparent"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+
 
 
 
@@ -258,12 +286,29 @@ function ConsultaPage() {
         {!loading && results.length > 0 && (
           <>
             <div className="text-sm text-muted-foreground mb-4">
-              {results.length} {mode === "image" ? "peça(s) mais parecida(s)" : "peça(s) encontrada(s)"}
+              {results.length}{" "}
+              {mode === "image"
+                ? sortMode === "recent"
+                  ? "peça(s) — mais recentes primeiro"
+                  : "peça(s) mais parecida(s)"
+                : "peça(s) encontrada(s)"}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {results.map((p) => (
-                <PieceCard key={p.id} piece={p} url={urls[p.image_path]} />
-              ))}
+              {[...results]
+                .sort((a, b) => {
+                  if (mode === "image" && sortMode === "recent") {
+                    const at = a.created_at ? Date.parse(a.created_at) : 0;
+                    const bt = b.created_at ? Date.parse(b.created_at) : 0;
+                    return bt - at;
+                  }
+                  if (mode === "image") {
+                    return (b.similarity ?? 0) - (a.similarity ?? 0);
+                  }
+                  return 0;
+                })
+                .map((p) => (
+                  <PieceCard key={p.id} piece={p} url={urls[p.image_path]} />
+                ))}
             </div>
           </>
         )}

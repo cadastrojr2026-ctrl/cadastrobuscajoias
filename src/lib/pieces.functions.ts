@@ -53,7 +53,7 @@ export const searchByImage = createServerFn({ method: "POST" })
       filter_category: data.category ?? null,
     } as never);
     if (error) throw new Error(error.message);
-    return (matches ?? []) as Array<{
+    const rows = (matches ?? []) as Array<{
       id: string;
       code: string;
       name: string | null;
@@ -61,6 +61,15 @@ export const searchByImage = createServerFn({ method: "POST" })
       category: string | null;
       similarity: number;
     }>;
+    if (rows.length === 0) return [] as Array<(typeof rows)[number] & { created_at: string | null }>;
+    const ids = rows.map((r) => r.id);
+    const { data: meta } = await context.supabase
+      .from("pieces")
+      .select("id, created_at")
+      .in("id", ids);
+    const map = new Map<string, string>();
+    for (const m of meta ?? []) map.set(m.id, m.created_at as unknown as string);
+    return rows.map((r) => ({ ...r, created_at: map.get(r.id) ?? null }));
   });
 
 export const searchByText = createServerFn({ method: "POST" })
