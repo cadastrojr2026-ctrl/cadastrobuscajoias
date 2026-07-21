@@ -57,6 +57,7 @@ function ConsultaPage() {
   const [category, setCategory] = useState<string>("");
   const [imageLimit, setImageLimit] = useState<number>(36);
   const [sortMode, setSortMode] = useState<SortMode>("similar");
+  const [lightbox, setLightbox] = useState<{ piece: Piece; url: string } | null>(null);
 
 
 
