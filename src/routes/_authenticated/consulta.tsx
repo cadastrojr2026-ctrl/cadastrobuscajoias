@@ -117,6 +117,15 @@ function ConsultaPage() {
     setMode("idle");
   }
 
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="text-center mb-8">
