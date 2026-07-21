@@ -4,9 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyRole } from "@/lib/pieces.functions";
 import { getMyApprovalStatus } from "@/lib/approvals.functions";
-import { LogOut, Search, ShieldCheck } from "lucide-react";
+import { LogOut, Search, ShieldCheck, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -106,6 +106,30 @@ function AuthedLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
+      <ScrollToTop />
     </div>
+  );
+}
+
+function ScrollToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 200);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      aria-label="Voltar ao topo"
+      className="fixed bottom-6 right-6 z-40 rounded-full gold-gradient p-3 shadow-lg shadow-black/30 text-primary-foreground hover:scale-105 transition"
+    >
+      <ArrowUp className="h-5 w-5" />
+    </button>
   );
 }
