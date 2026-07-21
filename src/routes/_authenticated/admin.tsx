@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,10 +9,10 @@ import {
   getMyRole,
   listAllPieces,
 } from "@/lib/pieces.functions";
+import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
-import { Trash2, Upload, Loader2, FolderUp } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Trash2, Loader2, FolderUp, Check, X, UserCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -54,10 +54,13 @@ function AdminPage() {
   const countFn = useServerFn(countPieces);
   const addFn = useServerFn(addPiece);
   const deleteFn = useServerFn(deletePiece);
+  const approvalsFn = useServerFn(listApprovals);
+  const setApprovalFn = useServerFn(setApprovalStatus);
   const qc = useQueryClient();
 
   const [filter, setFilter] = useState<string>("");
   const [uploadCategory, setUploadCategory] = useState<string>("anel");
+  const [approvalTab, setApprovalTab] = useState<"pending" | "approved" | "rejected">("pending");
 
   const { data: role } = useQuery({ queryKey: ["my-role"], queryFn: () => roleFn() });
   const { data: pieces = [], isLoading } = useQuery({
@@ -69,6 +72,18 @@ function AdminPage() {
     queryKey: ["pieces-count"],
     queryFn: () => countFn(),
     enabled: role?.isAdmin === true,
+  });
+  const { data: approvals = [] } = useQuery({
+    queryKey: ["approvals", approvalTab],
+    queryFn: () => approvalsFn({ data: { status: approvalTab } }),
+    enabled: role?.isAdmin === true,
+    refetchInterval: 15_000,
+  });
+  const { data: pendingCount = [] } = useQuery({
+    queryKey: ["approvals", "pending"],
+    queryFn: () => approvalsFn({ data: { status: "pending" } }),
+    enabled: role?.isAdmin === true,
+    refetchInterval: 15_000,
   });
 
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -91,6 +106,16 @@ function AdminPage() {
       toast.success("Peça removida");
       qc.invalidateQueries({ queryKey: ["all-pieces"] });
       qc.invalidateQueries({ queryKey: ["pieces-count"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const approveMut = useMutation({
+    mutationFn: (v: { userId: string; status: "approved" | "rejected" | "pending" }) =>
+      setApprovalFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Status atualizado");
+      qc.invalidateQueries({ queryKey: ["approvals"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -204,6 +229,82 @@ function AdminPage() {
           />
         </div>
       </div>
+
+      {/* Approvals section */}
+      <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-[color:var(--gold)]" />
+            <h2 className="serif text-xl gold-text">Aprovações de acesso</h2>
+            {pendingCount.length > 0 && (
+              <span className="ml-2 rounded-full bg-[color:var(--gold)]/20 text-[color:var(--gold)] text-xs px-2 py-0.5">
+                {pendingCount.length} pendente(s)
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {(["pending", "approved", "rejected"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setApprovalTab(s)}
+                className={`rounded-full px-3 py-1 text-xs border transition ${
+                  approvalTab === s
+                    ? "gold-gradient text-primary-foreground border-transparent"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {s === "pending" ? "Pendentes" : s === "approved" ? "Aprovados" : "Rejeitados"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {approvals.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">Nenhum usuário nesta categoria.</p>
+        ) : (
+          <div className="divide-y divide-border/60">
+            {approvals.map((u) => (
+              <div key={u.user_id} className="flex items-center justify-between py-3 gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{u.email || "(sem email)"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Cadastrado em {new Date(u.created_at).toLocaleString("pt-BR")}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {approvalTab !== "approved" && (
+                    <button
+                      onClick={() => approveMut.mutate({ userId: u.user_id, status: "approved" })}
+                      disabled={approveMut.isPending}
+                      className="flex items-center gap-1 rounded-md gold-gradient px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-60"
+                    >
+                      <Check className="h-3.5 w-3.5" /> Aprovar
+                    </button>
+                  )}
+                  {approvalTab !== "rejected" && (
+                    <button
+                      onClick={() => approveMut.mutate({ userId: u.user_id, status: "rejected" })}
+                      disabled={approveMut.isPending}
+                      className="flex items-center gap-1 rounded-md border border-destructive/60 text-destructive px-3 py-1.5 text-xs font-medium hover:bg-destructive/10 disabled:opacity-60"
+                    >
+                      <X className="h-3.5 w-3.5" /> Rejeitar
+                    </button>
+                  )}
+                  {approvalTab !== "pending" && (
+                    <button
+                      onClick={() => approveMut.mutate({ userId: u.user_id, status: "pending" })}
+                      disabled={approveMut.isPending}
+                      className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
+                    >
+                      Voltar p/ pendente
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
