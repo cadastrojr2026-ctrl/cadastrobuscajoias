@@ -286,12 +286,29 @@ function ConsultaPage() {
         {!loading && results.length > 0 && (
           <>
             <div className="text-sm text-muted-foreground mb-4">
-              {results.length} {mode === "image" ? "peça(s) mais parecida(s)" : "peça(s) encontrada(s)"}
+              {results.length}{" "}
+              {mode === "image"
+                ? sortMode === "recent"
+                  ? "peça(s) — mais recentes primeiro"
+                  : "peça(s) mais parecida(s)"
+                : "peça(s) encontrada(s)"}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {results.map((p) => (
-                <PieceCard key={p.id} piece={p} url={urls[p.image_path]} />
-              ))}
+              {[...results]
+                .sort((a, b) => {
+                  if (mode === "image" && sortMode === "recent") {
+                    const at = a.created_at ? Date.parse(a.created_at) : 0;
+                    const bt = b.created_at ? Date.parse(b.created_at) : 0;
+                    return bt - at;
+                  }
+                  if (mode === "image") {
+                    return (b.similarity ?? 0) - (a.similarity ?? 0);
+                  }
+                  return 0;
+                })
+                .map((p) => (
+                  <PieceCard key={p.id} piece={p} url={urls[p.image_path]} />
+                ))}
             </div>
           </>
         )}
