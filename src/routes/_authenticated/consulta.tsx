@@ -3,7 +3,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
 import { getSignedImageUrls } from "@/lib/storage";
-import { Search, Upload, X, Loader2, Camera, Image as ImageIcon } from "lucide-react";
+import {
+  Search,
+  Upload,
+  X,
+  Loader2,
+  Camera,
+  Image as ImageIcon,
+  LayoutGrid,
+  Circle,
+  CircleDashed,
+  Link as LinkIcon,
+  Gem,
+  Lightbulb,
+  Tag,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -24,12 +39,13 @@ type Piece = {
 
 type SortMode = "similar" | "recent";
 
+// Alphabetical order
 const CATEGORIES = [
-  { value: "", label: "Todas" },
-  { value: "anel", label: "Anéis" },
-  { value: "pingente", label: "Pingentes" },
-  { value: "cmb", label: "CMB" },
-  { value: "argola", label: "Argolas" },
+  { value: "", label: "Todas", icon: LayoutGrid },
+  { value: "anel", label: "Anéis", icon: Circle },
+  { value: "argola", label: "Argolas", icon: CircleDashed },
+  { value: "cmb", label: "CMB", icon: LinkIcon },
+  { value: "pingente", label: "Pingentes", icon: Gem },
 ] as const;
 
 const LIMIT_OPTIONS = [36, 48, 60] as const;
@@ -42,6 +58,16 @@ async function fileToDataUrl(file: File): Promise<string> {
     r.onerror = () => rej(r.error);
     r.readAsDataURL(file);
   });
+}
+
+function Divider() {
+  return (
+    <div className="flex items-center justify-center gap-3 my-2 opacity-70">
+      <span className="h-px w-16 sm:w-24 bg-[color:var(--gold)]/40" />
+      <span className="rotate-45 h-2 w-2 bg-[color:var(--gold)]/70" />
+      <span className="h-px w-16 sm:w-24 bg-[color:var(--gold)]/40" />
+    </div>
+  );
 }
 
 function ConsultaPage() {
@@ -60,8 +86,7 @@ function ConsultaPage() {
   const [imageLimit, setImageLimit] = useState<number>(36);
   const [sortMode, setSortMode] = useState<SortMode>("similar");
   const [lightbox, setLightbox] = useState<{ piece: Piece; url: string } | null>(null);
-
-
+  const [dragOver, setDragOver] = useState(false);
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
     const paths = rows.map((r) => r.image_path);
@@ -129,40 +154,49 @@ function ConsultaPage() {
   }, [lightbox]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      {/* Hero */}
       <div className="text-center mb-8">
-        <h1 className="serif text-3xl md:text-4xl gold-text">Consulta de Peças</h1>
-        <p className="text-sm text-muted-foreground mt-2">
+        <h1 className="serif text-4xl md:text-5xl gold-text">Consulta de Peças</h1>
+        <Divider />
+        <p className="text-sm md:text-base text-muted-foreground">
           Envie uma foto ou digite o código da peça
         </p>
       </div>
 
+      {/* Categories (alphabetical) */}
       <div className="flex gap-2 justify-center mb-6 flex-wrap">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.value || "all"}
-            onClick={() => setCategory(c.value)}
-            className={`rounded-full px-4 py-1.5 text-xs border transition ${
-              category === c.value
-                ? "gold-gradient text-primary-foreground border-transparent"
-                : "border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
+        {CATEGORIES.map((c) => {
+          const Icon = c.icon;
+          const active = category === c.value;
+          return (
+            <button
+              key={c.value || "all"}
+              onClick={() => setCategory(c.value)}
+              className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm border transition ${
+                active
+                  ? "gold-gradient text-primary-foreground border-transparent shadow-md shadow-black/30"
+                  : "border-[color:var(--gold)]/30 text-foreground/80 hover:text-foreground hover:border-[color:var(--gold)]/60 bg-card/40"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {c.label}
+            </button>
+          );
+        })}
       </div>
 
+      {/* Results-per-search */}
       <div className="flex items-center justify-center gap-2 mb-6">
         <span className="text-xs text-muted-foreground">Resultados por busca:</span>
         {LIMIT_OPTIONS.map((n) => (
           <button
             key={n}
             onClick={() => setImageLimit(n)}
-            className={`rounded-full px-3 py-1 text-xs border transition ${
+            className={`rounded-full px-4 py-1 text-xs border transition ${
               imageLimit === n
                 ? "gold-gradient text-primary-foreground border-transparent"
-                : "border-border text-muted-foreground hover:text-foreground"
+                : "border-[color:var(--gold)]/30 text-muted-foreground hover:text-foreground"
             }`}
           >
             {n}
@@ -183,7 +217,7 @@ function ConsultaPage() {
               className={`rounded-full px-3 py-1 text-xs border transition ${
                 sortMode === o.v
                   ? "gold-gradient text-primary-foreground border-transparent"
-                  : "border-border text-muted-foreground hover:text-foreground"
+                  : "border-[color:var(--gold)]/30 text-muted-foreground hover:text-foreground"
               }`}
             >
               {o.label}
@@ -192,57 +226,80 @@ function ConsultaPage() {
         </div>
       )}
 
-
-
-
-      <div className="grid md:grid-cols-2 gap-3 max-w-3xl mx-auto">
-        <form onSubmit={doTextSearch} className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search inputs */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Text search */}
+        <form
+          onSubmit={doTextSearch}
+          className="relative rounded-xl bg-card/70 border border-border p-2 flex items-center gap-2"
+        >
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder="Código da peça (ex: AND00196)"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="w-full rounded-lg bg-card border border-border pl-10 pr-24 py-3 text-sm focus:outline-none focus:border-[color:var(--gold)]"
+            className="flex-1 bg-transparent pl-8 pr-2 py-3 text-sm focus:outline-none placeholder:text-muted-foreground/70"
           />
           <button
             type="submit"
             disabled={loading || !q.trim()}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md gold-gradient px-4 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            className="rounded-lg gold-gradient px-6 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50 transition hover:brightness-110"
           >
             Buscar
           </button>
         </form>
 
+        {/* Image upload */}
         {isMobile ? (
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => cameraRef.current?.click()}
               disabled={loading}
-              className="rounded-lg border-2 border-dashed border-[color:var(--gold)]/40 bg-card/40 py-3 px-3 text-sm hover:bg-[color:var(--gold)]/10 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              className="rounded-xl border-2 border-dashed border-[color:var(--gold)]/50 bg-card/40 py-4 px-3 text-sm hover:bg-[color:var(--gold)]/10 transition flex flex-col items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              <Camera className="h-4 w-4 text-[color:var(--gold)]" />
+              <Camera className="h-5 w-5 text-[color:var(--gold)]" />
               Tirar foto
             </button>
             <button
               onClick={() => fileRef.current?.click()}
               disabled={loading}
-              className="rounded-lg border-2 border-dashed border-[color:var(--gold)]/40 bg-card/40 py-3 px-3 text-sm hover:bg-[color:var(--gold)]/10 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              className="rounded-xl border-2 border-dashed border-[color:var(--gold)]/50 bg-card/40 py-4 px-3 text-sm hover:bg-[color:var(--gold)]/10 transition flex flex-col items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              <ImageIcon className="h-4 w-4 text-[color:var(--gold)]" />
+              <ImageIcon className="h-5 w-5 text-[color:var(--gold)]" />
               Da galeria
             </button>
           </div>
         ) : (
           <button
+            type="button"
             onClick={() => fileRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f && f.type.startsWith("image/")) doImageSearch(f);
+            }}
             disabled={loading}
-            className="rounded-lg border-2 border-dashed border-[color:var(--gold)]/40 bg-card/40 py-3 px-4 text-sm hover:bg-[color:var(--gold)]/10 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            className={`rounded-xl border-2 border-dashed transition flex items-center justify-center gap-3 py-4 px-5 text-left disabled:opacity-50 ${
+              dragOver
+                ? "border-[color:var(--gold)] bg-[color:var(--gold)]/10"
+                : "border-[color:var(--gold)]/50 bg-card/40 hover:bg-[color:var(--gold)]/5"
+            }`}
           >
-            <Upload className="h-4 w-4 text-[color:var(--gold)]" />
-            Enviar foto para busca visual
+            <Upload className="h-5 w-5 text-[color:var(--gold)] shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold">Enviar foto para busca visual</span>
+              <span className="text-xs text-muted-foreground">Arraste e solte ou clique para enviar</span>
+            </div>
           </button>
         )}
+
         <input
           ref={fileRef}
           type="file"
@@ -268,8 +325,25 @@ function ConsultaPage() {
         />
       </div>
 
+      {/* Tip banner */}
+      <div className="mt-8 rounded-2xl border border-[color:var(--gold)]/25 bg-card/60 overflow-hidden">
+        <div className="grid md:grid-cols-[1fr_auto] items-center">
+          <div className="flex items-start gap-4 p-6">
+            <div className="rounded-full border border-[color:var(--gold)]/40 p-2.5 shrink-0">
+              <Lightbulb className="h-5 w-5 text-[color:var(--gold)]" />
+            </div>
+            <div>
+              <div className="font-semibold mb-1">Dica para melhores resultados</div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Utilize fotos nítidas, com boa iluminação e fundo neutro. Quanto mais clara a imagem, mais precisa será a busca.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {preview && (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-8 flex justify-center">
           <div className="relative">
             <img src={preview} alt="Sua foto" className="h-40 w-40 object-cover rounded-lg border border-[color:var(--gold)]/40" />
             <button
@@ -282,6 +356,7 @@ function ConsultaPage() {
         </div>
       )}
 
+      {/* Results / feature strip */}
       <div className="mt-10">
         {loading && (
           <div className="flex justify-center py-16">
@@ -332,6 +407,29 @@ function ConsultaPage() {
             </div>
           </>
         )}
+
+        {!loading && mode === "idle" && (
+          <>
+            <Divider />
+            <div className="grid sm:grid-cols-3 gap-6 mt-6">
+              <FeatureCard
+                icon={Camera}
+                title="Busca por imagem"
+                text="Envie uma foto da peça e encontre similares em segundos."
+              />
+              <FeatureCard
+                icon={Tag}
+                title="Busca por código"
+                text="Digite o código da peça para localizar rapidamente."
+              />
+              <FeatureCard
+                icon={ShieldCheck}
+                title="Resultados precisos"
+                text="Tecnologia avançada para encontrar peças com alta precisão."
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {lightbox && (
@@ -357,6 +455,28 @@ function ConsultaPage() {
           />
         </div>
       )}
+    </div>
+  );
+}
+
+function FeatureCard({
+  icon: Icon,
+  title,
+  text,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="rounded-full border border-[color:var(--gold)]/40 bg-card/60 p-3 shrink-0">
+        <Icon className="h-5 w-5 text-[color:var(--gold)]" />
+      </div>
+      <div>
+        <div className="font-semibold text-[color:var(--gold)] mb-1">{title}</div>
+        <p className="text-sm text-muted-foreground leading-relaxed">{text}</p>
+      </div>
     </div>
   );
 }
