@@ -30,6 +30,7 @@ type Piece = {
 const CATEGORIES = [
   { value: "anel", label: "Anéis" },
   { value: "pingente", label: "Pingentes" },
+  { value: "cmb", label: "CMB" },
 ] as const;
 
 
