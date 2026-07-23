@@ -29,6 +29,7 @@ const CATEGORIES = [
   { value: "anel", label: "Anéis" },
   { value: "pingente", label: "Pingentes" },
   { value: "cmb", label: "CMB" },
+  { value: "argola", label: "Argolas" },
 ] as const;
 
 const LIMIT_OPTIONS = [36, 48, 60] as const;
