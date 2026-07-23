@@ -27,11 +27,12 @@ type Piece = {
   created_at: string;
 };
 
+// Alphabetical order
 const CATEGORIES = [
   { value: "anel", label: "Anéis" },
-  { value: "pingente", label: "Pingentes" },
-  { value: "cmb", label: "CMB" },
   { value: "argola", label: "Argolas" },
+  { value: "cmb", label: "CMB" },
+  { value: "pingente", label: "Pingentes" },
 ] as const;
 
 
