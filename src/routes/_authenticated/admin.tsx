@@ -174,63 +174,67 @@ function AdminPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
-        <div>
-          <h1 className="serif text-3xl gold-text">Painel Admin</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {counts?.total ?? pieces.length} peça(s) no total
-            {counts?.byCategory && Object.keys(counts.byCategory).length > 0 && (
-              <span className="ml-2">
-                (
-                {CATEGORIES.map((c, i) => (
-                  <span key={c.value}>
-                    {i > 0 && " · "}
-                    {c.label}: {counts.byCategory[c.value] ?? 0}
-                  </span>
-                ))}
-                )
-              </span>
-            )}
-          </p>
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="text-center mb-6">
+        <h1 className="serif text-4xl md:text-5xl gold-text">Painel Admin</h1>
+        <div className="flex items-center justify-center gap-3 my-3 opacity-70">
+          <span className="h-px w-16 sm:w-24 bg-[color:var(--gold)]/40" />
+          <span className="rotate-45 h-2 w-2 bg-[color:var(--gold)]/70" />
+          <span className="h-px w-16 sm:w-24 bg-[color:var(--gold)]/40" />
         </div>
-        <div className="flex gap-2 items-center flex-wrap">
-          <select
-            value={uploadCategory}
-            onChange={(e) => setUploadCategory(e.target.value)}
-            disabled={uploading}
-            className="rounded-md bg-card border border-border px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--gold)]"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                Categoria: {c.label}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-2 rounded-md gold-gradient px-5 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
-          >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderUp className="h-4 w-4" />}
-            Enviar fotos (pasta)
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            /* @ts-expect-error webkitdirectory */
-            webkitdirectory=""
-            directory=""
-            className="hidden"
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
-              processFiles(files);
-              e.target.value = "";
-            }}
-          />
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {counts?.total ?? pieces.length} peça(s) no total
+          {counts?.byCategory && Object.keys(counts.byCategory).length > 0 && (
+            <span className="ml-2">
+              (
+              {CATEGORIES.map((c, i) => (
+                <span key={c.value}>
+                  {i > 0 && " · "}
+                  {c.label}: {counts.byCategory[c.value] ?? 0}
+                </span>
+              ))}
+              )
+            </span>
+          )}
+        </p>
+      </div>
+
+      <div className="flex gap-2 items-center flex-wrap justify-center mb-8">
+        <select
+          value={uploadCategory}
+          onChange={(e) => setUploadCategory(e.target.value)}
+          disabled={uploading}
+          className="rounded-lg bg-card border border-[color:var(--gold)]/30 px-4 py-2.5 text-sm focus:outline-none focus:border-[color:var(--gold)]"
+        >
+          {CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              Categoria: {c.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-2 rounded-lg gold-gradient px-6 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60 hover:brightness-110 transition"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderUp className="h-4 w-4" />}
+          Enviar fotos (pasta)
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          /* @ts-expect-error webkitdirectory */
+          webkitdirectory=""
+          directory=""
+          className="hidden"
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
+            processFiles(files);
+            e.target.value = "";
+          }}
+        />
       </div>
 
       {/* Approvals section */}
