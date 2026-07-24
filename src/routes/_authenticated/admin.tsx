@@ -29,6 +29,7 @@ type Piece = {
 
 // Alphabetical order
 const CATEGORIES = [
+  { value: "acessorio", label: "Acessórios" },
   { value: "anel", label: "Anéis" },
   { value: "argola", label: "Argolas" },
   { value: "cmb", label: "CMB" },

@@ -42,6 +42,7 @@ type SortMode = "similar" | "recent";
 // Alphabetical order
 const CATEGORIES = [
   { value: "", label: "Todas", icon: LayoutGrid },
+  { value: "acessorio", label: "Acessórios", icon: Gem },
   { value: "anel", label: "Anéis", icon: Circle },
   { value: "argola", label: "Argolas", icon: CircleDashed },
   { value: "cmb", label: "CMB", icon: LinkIcon },
