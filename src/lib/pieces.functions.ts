@@ -123,20 +123,6 @@ export const listAllPieces = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
-export const getPieceById = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
-  .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
-      .from("pieces")
-      .select("id, code, name, description, image_path, category, created_at")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row) throw new Error("Peça não encontrada");
-    return row;
-  });
-
 export const countPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

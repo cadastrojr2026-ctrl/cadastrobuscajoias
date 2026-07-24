@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
@@ -498,18 +498,11 @@ function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClic
           <div className="h-full w-full animate-pulse bg-muted" />
         )}
       </div>
-      <div className="p-3 flex items-center justify-between gap-2">
-        <div className="text-sm font-medium tracking-wide truncate">{piece.code}</div>
-        <div className="flex items-center gap-2 shrink-0">
-          {sim != null && <div className="text-xs text-[color:var(--gold)]">{sim}%</div>}
-          <Link
-            to="/piece/$id"
-            params={{ id: piece.id }}
-            className="text-[10px] uppercase tracking-wider text-[color:var(--gold)] hover:underline"
-          >
-            Detalhes
-          </Link>
-        </div>
+      <div className="p-3 flex items-center justify-between">
+        <div className="text-sm font-medium tracking-wide">{piece.code}</div>
+        {sim != null && (
+          <div className="text-xs text-[color:var(--gold)]">{sim}%</div>
+        )}
       </div>
     </div>
   );
