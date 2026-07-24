@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedConsultaRouteImport } from './routes/_authenticated/consulta'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedPieceIdRouteImport } from './routes/_authenticated/piece.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -39,18 +40,25 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPieceIdRoute = AuthenticatedPieceIdRouteImport.update({
+  id: '/piece/$id',
+  path: '/piece/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/consulta': typeof AuthenticatedConsultaRoute
+  '/piece/$id': typeof AuthenticatedPieceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/consulta': typeof AuthenticatedConsultaRoute
+  '/piece/$id': typeof AuthenticatedPieceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +67,13 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/consulta': typeof AuthenticatedConsultaRoute
+  '/_authenticated/piece/$id': typeof AuthenticatedPieceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/admin' | '/consulta'
+  fullPaths: '/' | '/auth' | '/admin' | '/consulta' | '/piece/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/admin' | '/consulta'
+  to: '/' | '/auth' | '/admin' | '/consulta' | '/piece/$id'
   id:
     | '__root__'
     | '/'
@@ -72,6 +81,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/consulta'
+    | '/_authenticated/piece/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -117,17 +127,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/piece/$id': {
+      id: '/_authenticated/piece/$id'
+      path: '/piece/$id'
+      fullPath: '/piece/$id'
+      preLoaderRoute: typeof AuthenticatedPieceIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedConsultaRoute: typeof AuthenticatedConsultaRoute
+  AuthenticatedPieceIdRoute: typeof AuthenticatedPieceIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedConsultaRoute: AuthenticatedConsultaRoute,
+  AuthenticatedPieceIdRoute: AuthenticatedPieceIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
