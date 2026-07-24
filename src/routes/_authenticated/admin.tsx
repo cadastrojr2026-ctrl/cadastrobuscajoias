@@ -33,6 +33,7 @@ const CATEGORIES = [
   { value: "anel", label: "Anéis" },
   { value: "argola", label: "Argolas" },
   { value: "cmb", label: "CMB" },
+  { value: "gaf", label: "GAF" },
   { value: "pingente", label: "Pingentes" },
 ] as const;
 
