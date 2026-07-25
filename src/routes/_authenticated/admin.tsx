@@ -32,6 +32,7 @@ const CATEGORIES = [
   { value: "acessorio", label: "Acessórios" },
   { value: "anel", label: "Anéis" },
   { value: "argola", label: "Argolas" },
+  { value: "brinco_medio", label: "Brincos Médios" },
   { value: "cmb", label: "CMB" },
   { value: "gaf", label: "GAF" },
   { value: "pingente", label: "Pingentes" },
