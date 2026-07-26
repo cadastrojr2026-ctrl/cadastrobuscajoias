@@ -214,6 +214,39 @@ function ConsultaPage() {
         </p>
       </div>
 
+      {/* View toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex rounded-full border border-[color:var(--gold)]/30 bg-card/40 p-1">
+          <button
+            onClick={() => setView("search")}
+            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition ${
+              view === "search"
+                ? "gold-gradient text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Search className="h-4 w-4" /> Buscar
+          </button>
+          <button
+            onClick={() => setView("favorites")}
+            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition ${
+              view === "favorites"
+                ? "gold-gradient text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Star className="h-4 w-4" />
+            Favoritos
+            {favIdsQuery.data && favIdsQuery.data.length > 0 && (
+              <span className="rounded-full bg-black/20 px-1.5 text-xs">
+                {favIdsQuery.data.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+
       {/* Categories (alphabetical) */}
       <div className="flex gap-2 justify-center mb-6 flex-wrap">
         {CATEGORIES.map((c) => {
