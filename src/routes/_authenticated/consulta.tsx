@@ -1,7 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
+import {
+  listFavorites,
+  listFavoriteIds,
+  addFavorite,
+  removeFavorite,
+} from "@/lib/favorites.functions";
 import { getSignedImageUrls } from "@/lib/storage";
 import {
   Search,
@@ -18,6 +25,7 @@ import {
   Lightbulb,
   Tag,
   ShieldCheck,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -76,11 +84,17 @@ function Divider() {
 function ConsultaPage() {
   const searchImage = useServerFn(searchByImage);
   const searchText = useServerFn(searchByText);
+  const listFavs = useServerFn(listFavorites);
+  const listFavIds = useServerFn(listFavoriteIds);
+  const addFav = useServerFn(addFavorite);
+  const removeFav = useServerFn(removeFavorite);
+  const queryClient = useQueryClient();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Piece[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"idle" | "text" | "image">("idle");
+  const [view, setView] = useState<"search" | "favorites">("search");
   const [preview, setPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -90,6 +104,39 @@ function ConsultaPage() {
   const [sortMode, setSortMode] = useState<SortMode>("similar");
   const [lightbox, setLightbox] = useState<{ piece: Piece; url: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  const favIdsQuery = useQuery({
+    queryKey: ["favorite-ids"],
+    queryFn: () => listFavIds(),
+    staleTime: 30_000,
+  });
+  const favIds = useMemo(() => new Set(favIdsQuery.data ?? []), [favIdsQuery.data]);
+
+  const favoritesQuery = useQuery({
+    queryKey: ["favorites"],
+    queryFn: () => listFavs(),
+    enabled: view === "favorites",
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (view === "favorites" && favoritesQuery.data) {
+      hydrateUrls(favoritesQuery.data as Piece[]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, favoritesQuery.data]);
+
+  const toggleFav = useMutation({
+    mutationFn: async ({ pieceId, isFav }: { pieceId: string; isFav: boolean }) => {
+      if (isFav) await removeFav({ data: { pieceId } });
+      else await addFav({ data: { pieceId } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["favorite-ids"] });
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro"),
+  });
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
     const paths = rows.map((r) => r.image_path);
@@ -167,8 +214,43 @@ function ConsultaPage() {
         </p>
       </div>
 
+      {/* View toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex rounded-full border border-[color:var(--gold)]/30 bg-card/40 p-1">
+          <button
+            onClick={() => setView("search")}
+            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition ${
+              view === "search"
+                ? "gold-gradient text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Search className="h-4 w-4" /> Buscar
+          </button>
+          <button
+            onClick={() => setView("favorites")}
+            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition ${
+              view === "favorites"
+                ? "gold-gradient text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Star className="h-4 w-4" />
+            Favoritos
+            {favIdsQuery.data && favIdsQuery.data.length > 0 && (
+              <span className="rounded-full bg-black/20 px-1.5 text-xs">
+                {favIdsQuery.data.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+
+      {view === "search" && (<>
       {/* Categories (alphabetical) */}
       <div className="flex gap-2 justify-center mb-6 flex-wrap">
+
         {CATEGORIES.map((c) => {
           const Icon = c.icon;
           const active = category === c.value;
@@ -358,22 +440,24 @@ function ConsultaPage() {
           </div>
         </div>
       )}
+      </>)}
 
       {/* Results / feature strip */}
       <div className="mt-10">
-        {loading && (
+
+        {view === "search" && loading && (
           <div className="flex justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-[color:var(--gold)]" />
           </div>
         )}
 
-        {!loading && mode !== "idle" && results.length === 0 && (
+        {view === "search" && !loading && mode !== "idle" && results.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             Nenhuma peça encontrada.
           </div>
         )}
 
-        {!loading && results.length > 0 && (
+        {view === "search" && !loading && results.length > 0 && (
           <>
             <div className="text-sm text-muted-foreground mb-4">
               {results.length}{" "}
@@ -401,6 +485,10 @@ function ConsultaPage() {
                     key={p.id}
                     piece={p}
                     url={urls[p.image_path]}
+                    isFav={favIds.has(p.id)}
+                    onToggleFav={() =>
+                      toggleFav.mutate({ pieceId: p.id, isFav: favIds.has(p.id) })
+                    }
                     onClick={() => {
                       const url = urls[p.image_path];
                       if (url) setLightbox({ piece: p, url });
@@ -411,7 +499,7 @@ function ConsultaPage() {
           </>
         )}
 
-        {!loading && mode === "idle" && (
+        {view === "search" && !loading && mode === "idle" && (
           <>
             <Divider />
             <div className="grid sm:grid-cols-3 gap-6 mt-6">
@@ -433,7 +521,46 @@ function ConsultaPage() {
             </div>
           </>
         )}
+
+        {view === "favorites" && (
+          <>
+            <div className="text-center mb-6">
+              <h2 className="serif text-2xl gold-text">Meus Favoritos</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Peças que você marcou para acessar rapidamente
+              </p>
+            </div>
+            {favoritesQuery.isLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-[color:var(--gold)]" />
+              </div>
+            ) : (favoritesQuery.data ?? []).length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                Você ainda não tem peças favoritas. Toque na estrela em qualquer peça para adicioná-la aqui.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {((favoritesQuery.data ?? []) as Piece[]).map((p) => (
+                  <PieceCard
+                    key={p.id}
+                    piece={p}
+                    url={urls[p.image_path]}
+                    isFav={true}
+                    onToggleFav={() =>
+                      toggleFav.mutate({ pieceId: p.id, isFav: true })
+                    }
+                    onClick={() => {
+                      const url = urls[p.image_path];
+                      if (url) setLightbox({ piece: p, url });
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
+
 
       {lightbox && (
         <div
@@ -484,10 +611,22 @@ function FeatureCard({
   );
 }
 
-function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClick?: () => void }) {
+function PieceCard({
+  piece,
+  url,
+  onClick,
+  isFav,
+  onToggleFav,
+}: {
+  piece: Piece;
+  url?: string;
+  onClick?: () => void;
+  isFav?: boolean;
+  onToggleFav?: () => void;
+}) {
   const sim = piece.similarity != null ? Math.round(piece.similarity * 100) : null;
   return (
-    <div className="group rounded-lg overflow-hidden border border-border bg-card hover:border-[color:var(--gold)]/60 transition">
+    <div className="group relative rounded-lg overflow-hidden border border-border bg-card hover:border-[color:var(--gold)]/60 transition">
       <div className="aspect-square bg-background/60 overflow-hidden cursor-pointer" onClick={onClick}>
         {url ? (
           <img
@@ -500,6 +639,23 @@ function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClic
           <div className="h-full w-full animate-pulse bg-muted" />
         )}
       </div>
+      {onToggleFav && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFav();
+          }}
+          aria-label={isFav ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          className={`absolute top-2 right-2 rounded-full p-1.5 backdrop-blur border transition ${
+            isFav
+              ? "bg-[color:var(--gold)]/90 border-[color:var(--gold)] text-black"
+              : "bg-black/50 border-white/20 text-white hover:bg-black/70"
+          }`}
+        >
+          <Star className={`h-4 w-4 ${isFav ? "fill-current" : ""}`} />
+        </button>
+      )}
       <div className="p-3 flex items-center justify-between">
         <div className="text-sm font-medium tracking-wide">{piece.code}</div>
         {sim != null && (
@@ -509,3 +665,4 @@ function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClic
     </div>
   );
 }
+
