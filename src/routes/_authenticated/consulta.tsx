@@ -247,8 +247,10 @@ function ConsultaPage() {
       </div>
 
 
+      {view === "search" && (<>
       {/* Categories (alphabetical) */}
       <div className="flex gap-2 justify-center mb-6 flex-wrap">
+
         {CATEGORIES.map((c) => {
           const Icon = c.icon;
           const active = category === c.value;
