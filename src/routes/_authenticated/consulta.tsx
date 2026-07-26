@@ -84,11 +84,17 @@ function Divider() {
 function ConsultaPage() {
   const searchImage = useServerFn(searchByImage);
   const searchText = useServerFn(searchByText);
+  const listFavs = useServerFn(listFavorites);
+  const listFavIds = useServerFn(listFavoriteIds);
+  const addFav = useServerFn(addFavorite);
+  const removeFav = useServerFn(removeFavorite);
+  const queryClient = useQueryClient();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Piece[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"idle" | "text" | "image">("idle");
+  const [view, setView] = useState<"search" | "favorites">("search");
   const [preview, setPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -98,6 +104,39 @@ function ConsultaPage() {
   const [sortMode, setSortMode] = useState<SortMode>("similar");
   const [lightbox, setLightbox] = useState<{ piece: Piece; url: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  const favIdsQuery = useQuery({
+    queryKey: ["favorite-ids"],
+    queryFn: () => listFavIds(),
+    staleTime: 30_000,
+  });
+  const favIds = useMemo(() => new Set(favIdsQuery.data ?? []), [favIdsQuery.data]);
+
+  const favoritesQuery = useQuery({
+    queryKey: ["favorites"],
+    queryFn: () => listFavs(),
+    enabled: view === "favorites",
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (view === "favorites" && favoritesQuery.data) {
+      hydrateUrls(favoritesQuery.data as Piece[]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, favoritesQuery.data]);
+
+  const toggleFav = useMutation({
+    mutationFn: async ({ pieceId, isFav }: { pieceId: string; isFav: boolean }) => {
+      if (isFav) await removeFav({ data: { pieceId } });
+      else await addFav({ data: { pieceId } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["favorite-ids"] });
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Erro"),
+  });
 
   const hydrateUrls = useCallback(async (rows: Piece[]) => {
     const paths = rows.map((r) => r.image_path);
