@@ -445,19 +445,19 @@ function ConsultaPage() {
       {/* Results / feature strip */}
       <div className="mt-10">
 
-        {loading && (
+        {view === "search" && loading && (
           <div className="flex justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-[color:var(--gold)]" />
           </div>
         )}
 
-        {!loading && mode !== "idle" && results.length === 0 && (
+        {view === "search" && !loading && mode !== "idle" && results.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             Nenhuma peça encontrada.
           </div>
         )}
 
-        {!loading && results.length > 0 && (
+        {view === "search" && !loading && results.length > 0 && (
           <>
             <div className="text-sm text-muted-foreground mb-4">
               {results.length}{" "}
@@ -485,6 +485,10 @@ function ConsultaPage() {
                     key={p.id}
                     piece={p}
                     url={urls[p.image_path]}
+                    isFav={favIds.has(p.id)}
+                    onToggleFav={() =>
+                      toggleFav.mutate({ pieceId: p.id, isFav: favIds.has(p.id) })
+                    }
                     onClick={() => {
                       const url = urls[p.image_path];
                       if (url) setLightbox({ piece: p, url });
@@ -495,7 +499,7 @@ function ConsultaPage() {
           </>
         )}
 
-        {!loading && mode === "idle" && (
+        {view === "search" && !loading && mode === "idle" && (
           <>
             <Divider />
             <div className="grid sm:grid-cols-3 gap-6 mt-6">
@@ -517,7 +521,46 @@ function ConsultaPage() {
             </div>
           </>
         )}
+
+        {view === "favorites" && (
+          <>
+            <div className="text-center mb-6">
+              <h2 className="serif text-2xl gold-text">Meus Favoritos</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Peças que você marcou para acessar rapidamente
+              </p>
+            </div>
+            {favoritesQuery.isLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-[color:var(--gold)]" />
+              </div>
+            ) : (favoritesQuery.data ?? []).length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                Você ainda não tem peças favoritas. Toque na estrela em qualquer peça para adicioná-la aqui.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {((favoritesQuery.data ?? []) as Piece[]).map((p) => (
+                  <PieceCard
+                    key={p.id}
+                    piece={p}
+                    url={urls[p.image_path]}
+                    isFav={true}
+                    onToggleFav={() =>
+                      toggleFav.mutate({ pieceId: p.id, isFav: true })
+                    }
+                    onClick={() => {
+                      const url = urls[p.image_path];
+                      if (url) setLightbox({ piece: p, url });
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
+
 
       {lightbox && (
         <div
