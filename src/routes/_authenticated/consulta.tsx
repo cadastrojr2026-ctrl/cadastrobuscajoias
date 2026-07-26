@@ -611,10 +611,22 @@ function FeatureCard({
   );
 }
 
-function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClick?: () => void }) {
+function PieceCard({
+  piece,
+  url,
+  onClick,
+  isFav,
+  onToggleFav,
+}: {
+  piece: Piece;
+  url?: string;
+  onClick?: () => void;
+  isFav?: boolean;
+  onToggleFav?: () => void;
+}) {
   const sim = piece.similarity != null ? Math.round(piece.similarity * 100) : null;
   return (
-    <div className="group rounded-lg overflow-hidden border border-border bg-card hover:border-[color:var(--gold)]/60 transition">
+    <div className="group relative rounded-lg overflow-hidden border border-border bg-card hover:border-[color:var(--gold)]/60 transition">
       <div className="aspect-square bg-background/60 overflow-hidden cursor-pointer" onClick={onClick}>
         {url ? (
           <img
@@ -627,6 +639,23 @@ function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClic
           <div className="h-full w-full animate-pulse bg-muted" />
         )}
       </div>
+      {onToggleFav && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFav();
+          }}
+          aria-label={isFav ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          className={`absolute top-2 right-2 rounded-full p-1.5 backdrop-blur border transition ${
+            isFav
+              ? "bg-[color:var(--gold)]/90 border-[color:var(--gold)] text-black"
+              : "bg-black/50 border-white/20 text-white hover:bg-black/70"
+          }`}
+        >
+          <Star className={`h-4 w-4 ${isFav ? "fill-current" : ""}`} />
+        </button>
+      )}
       <div className="p-3 flex items-center justify-between">
         <div className="text-sm font-medium tracking-wide">{piece.code}</div>
         {sim != null && (
@@ -636,3 +665,4 @@ function PieceCard({ piece, url, onClick }: { piece: Piece; url?: string; onClic
     </div>
   );
 }
+
