@@ -1,7 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
+import {
+  listFavorites,
+  listFavoriteIds,
+  addFavorite,
+  removeFavorite,
+} from "@/lib/favorites.functions";
 import { getSignedImageUrls } from "@/lib/storage";
 import {
   Search,
@@ -18,6 +25,7 @@ import {
   Lightbulb,
   Tag,
   ShieldCheck,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
