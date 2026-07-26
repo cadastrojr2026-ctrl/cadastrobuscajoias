@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      favorites: {
+        Row: {
+          created_at: string
+          id: string
+          piece_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          piece_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          piece_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pieces: {
         Row: {
           category: string | null
