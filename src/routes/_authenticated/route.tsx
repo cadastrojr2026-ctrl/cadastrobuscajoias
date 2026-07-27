@@ -4,9 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyRole } from "@/lib/pieces.functions";
 import { getMyApprovalStatus } from "@/lib/approvals.functions";
-import { LogOut, Search, ShieldCheck, ArrowUp } from "lucide-react";
+import { LogOut, Search, ShieldCheck, ArrowUp, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { useTheme } from "@/hooks/use-theme";
+
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -94,12 +96,14 @@ function AuthedLayout() {
                 <ShieldCheck className="h-4 w-4" /> Admin
               </Link>
             )}
+            <ThemeToggle />
             <button
               onClick={signOut}
               className="ml-2 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-destructive transition"
             >
               <LogOut className="h-4 w-4" /> Sair
             </button>
+
           </nav>
         </div>
       </header>
@@ -133,3 +137,19 @@ function ScrollToTop() {
     </button>
   );
 }
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <button
+      onClick={toggle}
+      aria-label={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
+      title={isDark ? "Tema claro" : "Tema escuro"}
+      className="ml-1 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-card transition"
+    >
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
+
