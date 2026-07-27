@@ -101,10 +101,11 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     background-image:
-      radial-gradient(ellipse at top, oklch(0.22 0.02 85 / 25%), transparent 60%),
-      radial-gradient(ellipse at bottom, oklch(0.2 0.015 60 / 40%), transparent 70%);
+      radial-gradient(ellipse at top, color-mix(in oklab, var(--color-gold) 15%, transparent), transparent 60%),
+      radial-gradient(ellipse at bottom, color-mix(in oklab, var(--color-gold) 8%, transparent), transparent 70%);
     min-height: 100vh;
   }
+
 
   h1, h2, .serif {
     font-family: var(--font-serif);
