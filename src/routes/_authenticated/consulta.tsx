@@ -27,6 +27,11 @@ import {
   ShieldCheck,
   Star,
 } from "lucide-react";
+import {
+  NecklaceIcon,
+  PendantIcon,
+  BraceletIcon,
+} from "@/components/jewelry-icons";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
