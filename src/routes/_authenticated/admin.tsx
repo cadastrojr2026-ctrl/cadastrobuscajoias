@@ -37,6 +37,7 @@ const CATEGORIES = [
   { value: "cmb", label: "CMB" },
   { value: "gaf", label: "GAF" },
   { value: "pingente", label: "Pingentes" },
+  { value: "pulseira_infantil", label: "Pulseiras Infantis" },
 ] as const;
 
 
