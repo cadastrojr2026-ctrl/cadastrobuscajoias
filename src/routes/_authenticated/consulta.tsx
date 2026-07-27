@@ -58,6 +58,7 @@ const CATEGORIES = [
   { value: "cmb", label: "CMB", icon: LinkIcon },
   { value: "gaf", label: "GAF", icon: Gem },
   { value: "pingente", label: "Pingentes", icon: Gem },
+  { value: "pulseira_infantil", label: "Pulseiras Infantis", icon: Gem },
 ] as const;
 
 const LIMIT_OPTIONS = [36, 48, 60] as const;
