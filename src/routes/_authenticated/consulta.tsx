@@ -62,6 +62,7 @@ const CATEGORIES = [
   { value: "brinco_medio", label: "Brincos Médios", icon: Gem },
   { value: "cmb", label: "CMB", icon: LinkIcon },
   { value: "gaf", label: "GAF", icon: NecklaceIcon },
+  { value: "gargantilha", label: "Gargantilhas", icon: NecklaceIcon },
   { value: "pingente", label: "Pingentes", icon: PendantIcon },
   { value: "pulseira_infantil", label: "Pulseiras Infantis", icon: BraceletIcon },
 ] as const;

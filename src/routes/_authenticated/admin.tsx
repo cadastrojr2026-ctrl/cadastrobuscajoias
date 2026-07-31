@@ -36,6 +36,7 @@ const CATEGORIES = [
  { value: "brinco_medio", label: "Brincos Médios" },
   { value: "cmb", label: "CMB" },
   { value: "gaf", label: "GAF" },
+  { value: "gargantilha", label: "Gargantilhas" },
   { value: "pingente", label: "Pingentes" },
   { value: "pulseira_infantil", label: "Pulseiras Infantis" },
 ] as const;
