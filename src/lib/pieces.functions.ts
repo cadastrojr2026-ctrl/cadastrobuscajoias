@@ -320,7 +320,12 @@ export const renamePiece = createServerFn({ method: "POST" })
       }
     }
 
-    const patch: Record<string, unknown> = {
+    const patch: {
+      code: string;
+      name: string | null;
+      image_path: string;
+      product_code?: string;
+    } = {
       code: newCode,
       name: newName,
       image_path: imagePath,
@@ -331,6 +336,7 @@ export const renamePiece = createServerFn({ method: "POST" })
     }
 
     const { error } = await context.supabase.from("pieces").update(patch).eq("id", data.id);
+
     if (error) throw new Error(error.message);
 
     return { ok: true, previousCode: piece.code, code: newCode, name: newName };
