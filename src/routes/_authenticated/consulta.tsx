@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
+import { normalizeForShapeSearch } from "@/lib/image-prep";
 import {
   listFavorites,
   listFavoriteIds,
