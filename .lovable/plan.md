@@ -1,30 +1,49 @@
-## O que eu encontrei
+# Limpar peso/valor do código das peças
 
-Reverter o código **não resolveria** o problema: as 696 peças novas estão no banco e no armazenamento, e o revert só volta o código (o sistema de sincronização também sairia, sem apagar nada do banco).
+Muitos códigos vieram do nome do arquivo com o peso no final (a parte circulada em vermelho), por exemplo `PGD00622_-_(4,85)`. Vou remover essa parte e deixar só o código do produto (`PGD00622`).
 
-A causa real está nos embeddings. Verifiquei no banco:
+## O que será removido
 
-- Lote novo de pingentes (03/08): 696 peças, todas com embedding de 3072 dimensões e imagem presente no armazenamento.
-- Ao buscar os vizinhos mais próximos de um pingente **novo**, aparecem **só peças do lote novo** (similaridade 0,96–0,97 entre elas).
-- Ao buscar os vizinhos de um pingente **antigo**, aparecem **só peças do lote antigo**.
+Somente o trecho de peso/valor numérico junto com o separador `-`/`_`:
 
-Ou seja: cada lote de importação usou um texto de instrução diferente ao gerar o embedding, e esse texto passou a dominar o vetor. O resultado é que cada lote forma um "grupo isolado". A busca do app usa o texto oficial (foco em geometria), então o lote novo cai numa região distante e praticamente nunca aparece nos resultados.
+```text
+PGD00622_-_(4,85)          ->  PGD00622
+GAD00339-23,55             ->  GAD00339
+PGD01073_-_7,95            ->  PGD01073
+PGD00434_-_(VP1558)_-_(3,50) -> PGD00434_-_(VP1558)
+```
 
-## Plano (conforme sua escolha: remover o lote novo)
+## O que NÃO será mexido
 
-1. Apagar do armazenamento os arquivos das 696 peças de pingente criadas em 03/08/2026.
-2. Apagar essas 696 linhas da tabela de peças (inclui embeddings e qualquer favorito ligado a elas).
-3. Rodar a verificação de integridade do índice e confirmar que o restante do catálogo continua 100% indexado.
-4. Relatório final: quantidade removida, embeddings removidos, erros e status.
+Sufixos que têm significado ficam como estão:
 
-Nada é alterado na interface nem na estrutura do banco.
+- `_(2)`, `_(1)` — segunda/terceira foto do mesmo produto
+- `_(6MM)`, `_(11MM)` — variação de tamanho
+- `_(ADEMAR)`, `_(PEQUENA)`, `_(PGD00094)` — referências internas
 
-## Importante para a próxima importação
+## Números levantados
 
-Se você reenviar esses pingentes, eu importo usando **exatamente o mesmo texto de instrução da busca do app** (`SHAPE_HINT`), para que os vetores fiquem comparáveis com o resto do catálogo. Sem isso, o mesmo problema volta a acontecer.
+- Peças com peso no código: **1.065**
+- Casos em que o código limpo já existe em outra peça: **83**
+- Nenhum código ficaria vazio após a limpeza
 
-Observação adicional: os nomes dos arquivos vinham com preço/peso (ex. `PGD00013_-_(6,78)`), o que virou código da peça. Na reimportação eu limpo isso e uso só o código (`PGD00013`).
+Para os 83 casos de conflito, a peça renomeada recebe um sufixo de foto (`_(2)`, `_(3)`, ...) e passa a apontar para o mesmo produto da peça original, para a busca continuar mostrando apenas uma ocorrência por produto.
 
-## Fica para depois (se você quiser)
+## Como será feito
 
-Os lotes antigos também foram importados com textos ligeiramente diferentes entre si, o que reduz a precisão geral entre categorias. A correção definitiva é reindexar o catálogo com um único texto padrão — isso consome créditos de IA por imagem, então só faço se você pedir.
+1. Uma rotina administrativa (server function) faz a limpeza em lote:
+   - calcula o código novo de cada peça afetada;
+   - renomeia o arquivo da imagem no armazenamento para o novo código;
+   - atualiza `code` e `product_code` na tabela `pieces`;
+   - o embedding é preservado — a busca por imagem não é afetada.
+2. Erros individuais são registrados e não interrompem o restante do lote.
+3. No painel Admin, um bloco "Limpar peso do código" com dois botões:
+   - **Pré-visualizar**: lista quantas peças serão alteradas e amostra de antes/depois;
+   - **Aplicar**: executa em blocos, com barra de progresso e relatório final (renomeadas, conflitos resolvidos, erros).
+
+## Detalhes técnicos
+
+- Nova função em `src/lib/pieces.functions.ts` (ou `src/lib/index-sync.functions.ts`): `previewCodeCleanup` e `applyCodeCleanup({ limit })`, ambas com `requireSupabaseAuth` + verificação de `has_role(admin)`.
+- Regex aplicada no servidor: remove `[ _]*-[ _]*\(?\d+([.,]\d+)?\)?` e limpa separadores nas pontas.
+- Reaproveita a lógica de mover arquivo do `renamePiece` (storage `move` + update).
+- Processamento em blocos (ex.: 200 por chamada) para não estourar tempo de execução.
