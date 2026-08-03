@@ -133,6 +133,16 @@ function AdminPage() {
   const [uploadQueue, setUploadQueue] = useState<{ name: string; status: "pending" | "ok" | "error"; msg?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [syncReport, setSyncReport] = useState<{
+    created: number;
+    updated: number;
+    removed: number;
+    embeddingsCreated: number;
+    embeddingsUpdated: number;
+    embeddingsRemoved: number;
+    errors: { code: string; message: string }[];
+  } | null>(null);
+
 
 
   async function processFiles(files: File[]) {
