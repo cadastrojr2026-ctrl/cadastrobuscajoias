@@ -75,6 +75,8 @@ function AdminPage() {
   const countFn = useServerFn(countPieces);
   const addFn = useServerFn(addPiece);
   const deleteFn = useServerFn(deletePiece);
+  const renameFn = useServerFn(renamePiece);
+
   const approvalsFn = useServerFn(listApprovals);
   const setApprovalFn = useServerFn(setApprovalStatus);
   const healthFn = useServerFn(getIndexHealth);
