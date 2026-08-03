@@ -12,7 +12,8 @@ import {
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
-import { Trash2, Loader2, FolderUp, Check, X, UserCheck } from "lucide-react";
+import { Trash2, Loader2, FolderUp, Check, X, UserCheck, RefreshCw } from "lucide-react";
+import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -65,6 +66,8 @@ function AdminPage() {
   const deleteFn = useServerFn(deletePiece);
   const approvalsFn = useServerFn(listApprovals);
   const setApprovalFn = useServerFn(setApprovalStatus);
+  const healthFn = useServerFn(getIndexHealth);
+  const syncFn = useServerFn(syncIndexIncremental);
   const qc = useQueryClient();
 
   const [filter, setFilter] = useState<string>("");
