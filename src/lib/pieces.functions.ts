@@ -260,7 +260,84 @@ export const addPiece = createServerFn({ method: "POST" })
   });
 
 
+/**
+ * Renomeia uma peça (código e/ou nome de exibição).
+ * O embedding é preservado — renomear não afeta a busca por imagem.
+ * Quando o código muda, o arquivo no armazenamento é movido junto.
+ */
+export const renamePiece = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        code: z.string().min(1).max(50),
+        name: z.string().max(120).optional(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: role } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!role) throw new Error("Apenas administradores.");
+
+    const newCode = data.code.trim().toUpperCase();
+    if (!newCode) throw new Error("Código inválido.");
+
+    const { data: piece, error: getErr } = await context.supabase
+      .from("pieces")
+      .select("id, code, image_path, product_code")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (getErr) throw new Error(getErr.message);
+    if (!piece) throw new Error("Peça não encontrada.");
+
+    const newName = data.name?.trim() ? data.name.trim() : null;
+
+    if (newCode !== piece.code) {
+      const { data: clash } = await context.supabase
+        .from("pieces")
+        .select("id")
+        .eq("code", newCode)
+        .maybeSingle();
+      if (clash && clash.id !== piece.id) {
+        throw new Error(`Já existe uma peça com o código ${newCode}.`);
+      }
+    }
+
+    let imagePath = piece.image_path;
+    if (newCode !== piece.code) {
+      const ext = piece.image_path.split(".").pop()?.toLowerCase() ?? "jpg";
+      const target = `${newCode}.${ext}`;
+      if (target !== piece.image_path) {
+        const { error: mvErr } = await context.supabase.storage
+          .from("pieces")
+          .move(piece.image_path, target);
+        if (mvErr) throw new Error(`Armazenamento: ${mvErr.message}`);
+        imagePath = target;
+      }
+    }
+
+    const patch: Record<string, unknown> = {
+      code: newCode,
+      name: newName,
+      image_path: imagePath,
+    };
+    // Peça sem variantes: mantém o código de produto alinhado ao novo código.
+    if (!piece.product_code || piece.product_code === piece.code) {
+      patch.product_code = newCode;
+    }
+
+    const { error } = await context.supabase.from("pieces").update(patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true, previousCode: piece.code, code: newCode, name: newName };
+  });
+
 export const deletePiece = createServerFn({ method: "POST" })
+
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
