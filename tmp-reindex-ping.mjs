@@ -21,7 +21,7 @@ const { data: rows, error } = await supabase
   .from("pieces")
   .select("id, code, image_path")
   .eq("category", CATEGORY)
-  .lt("created_at", "2026-08-02T00:00:00Z");
+  .lt("updated_at", "2026-08-03T16:30:00Z");
 if (error) throw error;
 console.log(`Reindex ${rows.length} pingentes`);
 
