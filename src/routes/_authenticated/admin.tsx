@@ -82,6 +82,11 @@ function AdminPage() {
     queryFn: () => countFn(),
     enabled: role?.isAdmin === true,
   });
+  const { data: health } = useQuery({
+    queryKey: ["index-health"],
+    queryFn: () => healthFn(),
+    enabled: role?.isAdmin === true,
+  });
   const { data: approvals = [] } = useQuery({
     queryKey: ["approvals", approvalTab],
     queryFn: () => approvalsFn({ data: { status: approvalTab } }),
@@ -293,6 +298,72 @@ function AdminPage() {
           }}
         />
       </div>
+
+      {/* Sincronização do índice de busca por imagem */}
+      <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-[color:var(--gold)]" />
+            <h2 className="serif text-xl gold-text">Índice de busca por imagem</h2>
+            {health && (
+              <span
+                className={`ml-2 rounded-full text-xs px-2 py-0.5 ${
+                  health.healthy
+                    ? "bg-[color:var(--gold)]/20 text-[color:var(--gold)]"
+                    : "bg-destructive/15 text-destructive"
+                }`}
+              >
+                {health.healthy ? "Sincronizado" : `${health.missing} pendente(s)`}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => syncMut.mutate()}
+            disabled={syncMut.isPending || uploading}
+            className="flex items-center gap-2 rounded-lg border border-[color:var(--gold)]/40 px-4 py-2 text-xs font-medium hover:bg-[color:var(--gold)]/10 disabled:opacity-60"
+          >
+            {syncMut.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Sincronizar pendentes (incremental)
+          </button>
+        </div>
+        {health && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {health.indexed} de {health.total} peça(s) indexadas na busca por imagem · sem embedding:{" "}
+            {health.missing}
+          </p>
+        )}
+        {syncReport && (
+          <div className="mt-4 rounded-lg border border-border bg-background/50 p-4 text-xs space-y-1">
+            <div className="font-semibold text-[color:var(--gold)] mb-1">Relatório de sincronização</div>
+            <div>Produtos adicionados: {syncReport.created}</div>
+            <div>Produtos atualizados: {syncReport.updated}</div>
+            <div>Produtos removidos: {syncReport.removed}</div>
+            <div>Embeddings criados: {syncReport.embeddingsCreated}</div>
+            <div>Embeddings atualizados: {syncReport.embeddingsUpdated}</div>
+            <div>Embeddings removidos: {syncReport.embeddingsRemoved}</div>
+            <div>Erros encontrados: {syncReport.errors.length}</div>
+            {syncReport.errors.length > 0 && (
+              <ul className="mt-1 max-h-32 overflow-auto text-destructive">
+                {syncReport.errors.map((e, i) => (
+                  <li key={`${e.code}-${i}`}>
+                    {e.code}: {e.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="pt-1">
+              Status:{" "}
+              <span className={syncReport.errors.length === 0 ? "text-[color:var(--gold)]" : "text-destructive"}>
+                {syncReport.errors.length === 0 ? "Sincronizado com sucesso" : "Concluído com pendências"}
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* Approvals section */}
       <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">
