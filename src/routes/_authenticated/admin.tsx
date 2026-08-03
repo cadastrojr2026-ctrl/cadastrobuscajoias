@@ -83,7 +83,10 @@ function AdminPage() {
   const setApprovalFn = useServerFn(setApprovalStatus);
   const healthFn = useServerFn(getIndexHealth);
   const syncFn = useServerFn(syncIndexIncremental);
+  const previewCleanFn = useServerFn(previewCodeCleanup);
+  const applyCleanFn = useServerFn(applyCodeCleanup);
   const qc = useQueryClient();
+
 
   const [filter, setFilter] = useState<string>("");
   const [uploadCategory, setUploadCategory] = useState<string>("anel");
