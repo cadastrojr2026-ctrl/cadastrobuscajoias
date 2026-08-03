@@ -150,6 +150,32 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const [renaming, setRenaming] = useState<Piece | null>(null);
+  const [renameCode, setRenameCode] = useState("");
+  const [renameName, setRenameName] = useState("");
+
+  const renameMut = useMutation({
+    mutationFn: (v: { id: string; code: string; name?: string }) => renameFn({ data: v }),
+    onSuccess: (r) => {
+      toast.success(
+        r.previousCode === r.code
+          ? `Peça ${r.code} atualizada`
+          : `${r.previousCode} renomeada para ${r.code}`,
+      );
+      setRenaming(null);
+      setUrls({});
+      qc.invalidateQueries({ queryKey: ["all-pieces"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  function openRename(p: Piece) {
+    setRenaming(p);
+    setRenameCode(p.code);
+    setRenameName(p.name ?? "");
+  }
+
+
   const syncMut = useMutation({
     mutationFn: () => syncFn({ data: { limit: 25 } }),
     onSuccess: (r) => {
