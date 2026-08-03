@@ -137,6 +137,28 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const syncMut = useMutation({
+    mutationFn: () => syncFn({ data: { limit: 25 } }),
+    onSuccess: (r) => {
+      setSyncReport({
+        created: 0,
+        updated: r.embeddingsUpdated,
+        removed: 0,
+        embeddingsCreated: 0,
+        embeddingsUpdated: r.embeddingsUpdated,
+        embeddingsRemoved: 0,
+        errors: r.errors,
+      });
+      qc.invalidateQueries({ queryKey: ["index-health"] });
+      if (r.processed === 0) toast.success("Índice já está sincronizado");
+      else
+        toast.success(
+          `${r.embeddingsUpdated} embedding(s) atualizado(s) · ${r.failed} erro(s) · restam ${r.remainingWithoutEmbedding}`,
+        );
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
 
   const approveMut = useMutation({
     mutationFn: (v: { userId: string; status: "approved" | "rejected" | "pending" }) =>
