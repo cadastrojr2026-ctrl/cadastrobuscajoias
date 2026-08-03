@@ -12,7 +12,8 @@ import {
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
-import { Trash2, Loader2, FolderUp, Check, X, UserCheck } from "lucide-react";
+import { Trash2, Loader2, FolderUp, Check, X, UserCheck, RefreshCw } from "lucide-react";
+import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -65,6 +66,8 @@ function AdminPage() {
   const deleteFn = useServerFn(deletePiece);
   const approvalsFn = useServerFn(listApprovals);
   const setApprovalFn = useServerFn(setApprovalStatus);
+  const healthFn = useServerFn(getIndexHealth);
+  const syncFn = useServerFn(syncIndexIncremental);
   const qc = useQueryClient();
 
   const [filter, setFilter] = useState<string>("");
@@ -80,6 +83,11 @@ function AdminPage() {
   const { data: counts } = useQuery({
     queryKey: ["pieces-count"],
     queryFn: () => countFn(),
+    enabled: role?.isAdmin === true,
+  });
+  const { data: health } = useQuery({
+    queryKey: ["index-health"],
+    queryFn: () => healthFn(),
     enabled: role?.isAdmin === true,
   });
   const { data: approvals = [] } = useQuery({
@@ -112,12 +120,45 @@ function AdminPage() {
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
-      toast.success("Peça removida");
+      toast.success("Peça removida (embedding removido do índice)");
+      setSyncReport({
+        created: 0,
+        updated: 0,
+        removed: 1,
+        embeddingsCreated: 0,
+        embeddingsUpdated: 0,
+        embeddingsRemoved: 1,
+        errors: [],
+      });
       qc.invalidateQueries({ queryKey: ["all-pieces"] });
       qc.invalidateQueries({ queryKey: ["pieces-count"] });
+      qc.invalidateQueries({ queryKey: ["index-health"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
+
+  const syncMut = useMutation({
+    mutationFn: () => syncFn({ data: { limit: 25 } }),
+    onSuccess: (r) => {
+      setSyncReport({
+        created: 0,
+        updated: r.embeddingsUpdated,
+        removed: 0,
+        embeddingsCreated: 0,
+        embeddingsUpdated: r.embeddingsUpdated,
+        embeddingsRemoved: 0,
+        errors: r.errors,
+      });
+      qc.invalidateQueries({ queryKey: ["index-health"] });
+      if (r.processed === 0) toast.success("Índice já está sincronizado");
+      else
+        toast.success(
+          `${r.embeddingsUpdated} embedding(s) atualizado(s) · ${r.failed} erro(s) · restam ${r.remainingWithoutEmbedding}`,
+        );
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
 
   const approveMut = useMutation({
     mutationFn: (v: { userId: string; status: "approved" | "rejected" | "pending" }) =>
@@ -133,6 +174,16 @@ function AdminPage() {
   const [uploadQueue, setUploadQueue] = useState<{ name: string; status: "pending" | "ok" | "error"; msg?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [syncReport, setSyncReport] = useState<{
+    created: number;
+    updated: number;
+    removed: number;
+    embeddingsCreated: number;
+    embeddingsUpdated: number;
+    embeddingsRemoved: number;
+    errors: { code: string; message: string }[];
+  } | null>(null);
+
 
 
   async function processFiles(files: File[]) {
@@ -141,32 +192,62 @@ function AdminPage() {
     setProgress({ done: 0, total: files.length });
     const queue = files.map((f) => ({ name: f.name, status: "pending" as const }));
     setUploadQueue(queue);
+    setSyncReport(null);
+
+    // Várias fotos do mesmo produto: 1ª = CODE, demais = CODE_V2, CODE_V3...
+    // todas associadas ao mesmo código de produto.
+    const seen = new Map<string, number>();
+    let created = 0;
+    let updated = 0;
+    const errs: { code: string; message: string }[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      const code = codeFromFilename(f.name);
+      const productCode = codeFromFilename(f.name);
+      const n = (seen.get(productCode) ?? 0) + 1;
+      seen.set(productCode, n);
+      const code = n === 1 ? productCode : `${productCode}_V${n}`;
       try {
         const dataUrl = await fileToDataUrl(f);
-        await addFn({ data: { code, imageDataUrl: dataUrl, category: uploadCategory } });
+        const res = await addFn({
+          data: { code, productCode, imageDataUrl: dataUrl, category: uploadCategory },
+        });
+        if (res?.action === "updated") updated++;
+        else created++;
         setUploadQueue((prev) => {
           const c = [...prev];
           c[i] = { ...c[i], status: "ok" };
           return c;
         });
       } catch (err) {
+        const message = err instanceof Error ? err.message : "erro";
+        errs.push({ code, message });
         setUploadQueue((prev) => {
           const c = [...prev];
-          c[i] = { ...c[i], status: "error", msg: err instanceof Error ? err.message : "erro" };
+          c[i] = { ...c[i], status: "error", msg: message };
           return c;
         });
       }
       setProgress({ done: i + 1, total: files.length });
     }
     setUploading(false);
+    setSyncReport({
+      created,
+      updated,
+      removed: 0,
+      embeddingsCreated: created,
+      embeddingsUpdated: updated,
+      embeddingsRemoved: 0,
+      errors: errs,
+    });
     qc.invalidateQueries({ queryKey: ["all-pieces"] });
     qc.invalidateQueries({ queryKey: ["pieces-count"] });
-    toast.success("Upload concluído");
+    qc.invalidateQueries({ queryKey: ["index-health"] });
+    toast.success(
+      `Sincronização: ${created} adicionada(s), ${updated} atualizada(s), ${errs.length} erro(s)`,
+    );
   }
+
 
   if (role && !role.isAdmin) {
     return (
@@ -242,6 +323,72 @@ function AdminPage() {
           }}
         />
       </div>
+
+      {/* Sincronização do índice de busca por imagem */}
+      <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-[color:var(--gold)]" />
+            <h2 className="serif text-xl gold-text">Índice de busca por imagem</h2>
+            {health && (
+              <span
+                className={`ml-2 rounded-full text-xs px-2 py-0.5 ${
+                  health.healthy
+                    ? "bg-[color:var(--gold)]/20 text-[color:var(--gold)]"
+                    : "bg-destructive/15 text-destructive"
+                }`}
+              >
+                {health.healthy ? "Sincronizado" : `${health.missing} pendente(s)`}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => syncMut.mutate()}
+            disabled={syncMut.isPending || uploading}
+            className="flex items-center gap-2 rounded-lg border border-[color:var(--gold)]/40 px-4 py-2 text-xs font-medium hover:bg-[color:var(--gold)]/10 disabled:opacity-60"
+          >
+            {syncMut.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Sincronizar pendentes (incremental)
+          </button>
+        </div>
+        {health && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {health.indexed} de {health.total} peça(s) indexadas na busca por imagem · sem embedding:{" "}
+            {health.missing}
+          </p>
+        )}
+        {syncReport && (
+          <div className="mt-4 rounded-lg border border-border bg-background/50 p-4 text-xs space-y-1">
+            <div className="font-semibold text-[color:var(--gold)] mb-1">Relatório de sincronização</div>
+            <div>Produtos adicionados: {syncReport.created}</div>
+            <div>Produtos atualizados: {syncReport.updated}</div>
+            <div>Produtos removidos: {syncReport.removed}</div>
+            <div>Embeddings criados: {syncReport.embeddingsCreated}</div>
+            <div>Embeddings atualizados: {syncReport.embeddingsUpdated}</div>
+            <div>Embeddings removidos: {syncReport.embeddingsRemoved}</div>
+            <div>Erros encontrados: {syncReport.errors.length}</div>
+            {syncReport.errors.length > 0 && (
+              <ul className="mt-1 max-h-32 overflow-auto text-destructive">
+                {syncReport.errors.map((e, i) => (
+                  <li key={`${e.code}-${i}`}>
+                    {e.code}: {e.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="pt-1">
+              Status:{" "}
+              <span className={syncReport.errors.length === 0 ? "text-[color:var(--gold)]" : "text-destructive"}>
+                {syncReport.errors.length === 0 ? "Sincronizado com sucesso" : "Concluído com pendências"}
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* Approvals section */}
       <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">
