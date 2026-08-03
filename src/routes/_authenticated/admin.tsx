@@ -112,12 +112,23 @@ function AdminPage() {
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
-      toast.success("Peça removida");
+      toast.success("Peça removida (embedding removido do índice)");
+      setSyncReport({
+        created: 0,
+        updated: 0,
+        removed: 1,
+        embeddingsCreated: 0,
+        embeddingsUpdated: 0,
+        embeddingsRemoved: 1,
+        errors: [],
+      });
       qc.invalidateQueries({ queryKey: ["all-pieces"] });
       qc.invalidateQueries({ queryKey: ["pieces-count"] });
+      qc.invalidateQueries({ queryKey: ["index-health"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
+
 
   const approveMut = useMutation({
     mutationFn: (v: { userId: string; status: "approved" | "rejected" | "pending" }) =>
