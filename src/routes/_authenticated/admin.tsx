@@ -22,6 +22,8 @@ import {
   UserCheck,
   RefreshCw,
   Pencil,
+  Eraser,
+
 } from "lucide-react";
 import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
 import { applyCodeCleanup, previewCodeCleanup } from "@/lib/code-cleanup.functions";
