@@ -42,6 +42,7 @@ type MatchRow = {
   name: string | null;
   image_path: string;
   category: string | null;
+  product_code?: string | null;
   similarity: number;
 };
 
@@ -94,11 +95,20 @@ export const searchByImage = createServerFn({ method: "POST" })
       });
     }
 
+    // Várias fotos podem pertencer ao mesmo produto: mantém apenas a melhor
+    // ocorrência de cada produto no resultado.
+    const seenProduct = new Set<string>();
     const rows = [...scores.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, data.limit)
       .map(([id]) => best.get(id)!)
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter((r) => {
+        const key = r.product_code || r.code;
+        if (seenProduct.has(key)) return false;
+        seenProduct.add(key);
+        return true;
+      })
+      .slice(0, data.limit);
 
     if (rows.length === 0) return [] as Array<MatchRow & { created_at: string | null }>;
     const ids = rows.map((r) => r.id);
