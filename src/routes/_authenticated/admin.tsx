@@ -203,6 +203,56 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  // ---- Limpeza de peso/valor no código ----
+  const [cleanPreview, setCleanPreview] = useState<{
+    total: number;
+    affected: number;
+    conflicts: number;
+    sample: { from: string; to: string }[];
+  } | null>(null);
+  const [cleanProgress, setCleanProgress] = useState<{
+    renamed: number;
+    conflictsResolved: number;
+    remaining: number;
+    errors: { code: string; message: string }[];
+    running: boolean;
+  } | null>(null);
+
+  const previewCleanMut = useMutation({
+    mutationFn: () => previewCleanFn(),
+    onSuccess: (r) => {
+      setCleanPreview(r);
+      if (r.affected === 0) toast.success("Nenhum código com peso/valor encontrado");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  async function runCleanup() {
+    setCleanProgress({ renamed: 0, conflictsResolved: 0, remaining: 0, errors: [], running: true });
+    let renamed = 0;
+    let conflictsResolved = 0;
+    let errors: { code: string; message: string }[] = [];
+    try {
+      for (let i = 0; i < 40; i++) {
+        const r = await applyCleanFn({ data: { limit: 150 } });
+        renamed += r.renamed;
+        conflictsResolved += r.conflictsResolved;
+        errors = [...errors, ...r.errors].slice(0, 50);
+        setCleanProgress({ renamed, conflictsResolved, remaining: r.remaining, errors, running: r.remaining > 0 });
+        if (r.remaining === 0 || r.processed === 0) break;
+      }
+      toast.success(`${renamed} código(s) limpo(s) · ${errors.length} erro(s)`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setCleanProgress((p) => (p ? { ...p, running: false } : p));
+      setUrls({});
+      qc.invalidateQueries({ queryKey: ["all-pieces"] });
+      previewCleanMut.mutate();
+    }
+  }
+
+
 
   const approveMut = useMutation({
     mutationFn: (v: { userId: string; status: "approved" | "rejected" | "pending" }) =>
