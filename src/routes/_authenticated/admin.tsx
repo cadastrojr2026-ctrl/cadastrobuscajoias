@@ -8,12 +8,23 @@ import {
   deletePiece,
   getMyRole,
   listAllPieces,
+  renamePiece,
 } from "@/lib/pieces.functions";
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
-import { Trash2, Loader2, FolderUp, Check, X, UserCheck, RefreshCw } from "lucide-react";
+import {
+  Trash2,
+  Loader2,
+  FolderUp,
+  Check,
+  X,
+  UserCheck,
+  RefreshCw,
+  Pencil,
+} from "lucide-react";
 import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -64,6 +75,8 @@ function AdminPage() {
   const countFn = useServerFn(countPieces);
   const addFn = useServerFn(addPiece);
   const deleteFn = useServerFn(deletePiece);
+  const renameFn = useServerFn(renamePiece);
+
   const approvalsFn = useServerFn(listApprovals);
   const setApprovalFn = useServerFn(setApprovalStatus);
   const healthFn = useServerFn(getIndexHealth);
@@ -136,6 +149,32 @@ function AdminPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
+
+  const [renaming, setRenaming] = useState<Piece | null>(null);
+  const [renameCode, setRenameCode] = useState("");
+  const [renameName, setRenameName] = useState("");
+
+  const renameMut = useMutation({
+    mutationFn: (v: { id: string; code: string; name?: string }) => renameFn({ data: v }),
+    onSuccess: (r) => {
+      toast.success(
+        r.previousCode === r.code
+          ? `Peça ${r.code} atualizada`
+          : `${r.previousCode} renomeada para ${r.code}`,
+      );
+      setRenaming(null);
+      setUrls({});
+      qc.invalidateQueries({ queryKey: ["all-pieces"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  function openRename(p: Piece) {
+    setRenaming(p);
+    setRenameCode(p.code);
+    setRenameName(p.name ?? "");
+  }
+
 
   const syncMut = useMutation({
     mutationFn: () => syncFn({ data: { limit: 25 } }),
@@ -541,20 +580,109 @@ function AdminPage() {
                 ) : (
                   <div className="h-full w-full animate-pulse bg-muted" />
                 )}
-                <button
-                  onClick={() => {
-                    if (confirm(`Remover peça ${p.code}?`)) del.mutate(p.id);
-                  }}
-                  className="absolute top-1.5 right-1.5 rounded-full bg-background/80 backdrop-blur p-1.5 opacity-0 group-hover:opacity-100 hover:bg-destructive transition"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+                  <button
+                    title="Renomear peça"
+                    aria-label={`Renomear peça ${p.code}`}
+                    onClick={() => openRename(p)}
+                    className="rounded-full bg-background/80 backdrop-blur p-1.5 hover:bg-[color:var(--gold)]/30 transition"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    title="Remover peça"
+                    aria-label={`Remover peça ${p.code}`}
+                    onClick={() => {
+                      if (confirm(`Remover peça ${p.code}?`)) del.mutate(p.id);
+                    }}
+                    className="rounded-full bg-background/80 backdrop-blur p-1.5 hover:bg-destructive transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="p-2 text-center text-xs font-medium tracking-wide">{p.code}</div>
+              <div className="p-2 text-center text-xs font-medium tracking-wide truncate">{p.code}</div>
+              {p.name && (
+                <div className="px-2 pb-2 text-center text-[11px] text-muted-foreground truncate">
+                  {p.name}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+
+      {renaming && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+          onClick={() => !renameMut.isPending && setRenaming(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-[color:var(--gold)]/30 bg-card p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="serif text-xl gold-text mb-1">Renomear peça</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              O código atual é <span className="font-medium">{renaming.code}</span>. A imagem e o
+              índice de busca são preservados.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const code = renameCode.trim().toUpperCase();
+                if (!code) {
+                  toast.error("Informe o código da peça.");
+                  return;
+                }
+                renameMut.mutate({
+                  id: renaming.id,
+                  code,
+                  name: renameName.trim() || undefined,
+                });
+              }}
+              className="space-y-3"
+            >
+              <label className="block text-xs">
+                <span className="text-muted-foreground">Código</span>
+                <input
+                  autoFocus
+                  value={renameCode}
+                  onChange={(e) => setRenameCode(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-background border border-[color:var(--gold)]/30 px-3 py-2 text-sm uppercase focus:outline-none focus:border-[color:var(--gold)]"
+                />
+              </label>
+              <label className="block text-xs">
+                <span className="text-muted-foreground">Nome (opcional)</span>
+                <input
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  placeholder="Ex.: Pingente coração cravejado"
+                  className="mt-1 w-full rounded-lg bg-background border border-[color:var(--gold)]/30 px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--gold)]"
+                />
+              </label>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setRenaming(null)}
+                  disabled={renameMut.isPending}
+                  className="rounded-lg border border-border px-4 py-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={renameMut.isPending}
+                  className="flex items-center gap-2 rounded-lg gold-gradient px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+                >
+                  {renameMut.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 }
