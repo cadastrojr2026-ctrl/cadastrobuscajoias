@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { searchByImage, searchByText } from "@/lib/pieces.functions";
+import { normalizeForShapeSearch } from "@/lib/image-prep";
 import {
   listFavorites,
   listFavoriteIds,
@@ -183,8 +184,14 @@ function ConsultaPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
+      const shapeDataUrl = await normalizeForShapeSearch(dataUrl);
       const rows = (await searchImage({
-        data: { imageDataUrl: dataUrl, limit: imageLimit, category: category || undefined },
+        data: {
+          imageDataUrl: dataUrl,
+          shapeDataUrl,
+          limit: imageLimit,
+          category: category || undefined,
+        },
       })) as Piece[];
       setResults(rows);
       hydrateUrls(rows);
