@@ -24,6 +24,8 @@ import {
   Pencil,
 } from "lucide-react";
 import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
+import { applyCodeCleanup, previewCodeCleanup } from "@/lib/code-cleanup.functions";
+
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
