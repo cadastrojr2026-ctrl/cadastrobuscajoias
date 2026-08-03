@@ -222,7 +222,7 @@ function ThemeToggle() {
       onClick={toggle}
       aria-label={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
       title={isDark ? "Tema claro" : "Tema escuro"}
-      className="ml-1 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-card transition"
+      className="flex items-center justify-center rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-[#d8b25f]"
     >
       {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>
