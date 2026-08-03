@@ -141,32 +141,62 @@ function AdminPage() {
     setProgress({ done: 0, total: files.length });
     const queue = files.map((f) => ({ name: f.name, status: "pending" as const }));
     setUploadQueue(queue);
+    setSyncReport(null);
+
+    // Várias fotos do mesmo produto: 1ª = CODE, demais = CODE_V2, CODE_V3...
+    // todas associadas ao mesmo código de produto.
+    const seen = new Map<string, number>();
+    let created = 0;
+    let updated = 0;
+    const errs: { code: string; message: string }[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      const code = codeFromFilename(f.name);
+      const productCode = codeFromFilename(f.name);
+      const n = (seen.get(productCode) ?? 0) + 1;
+      seen.set(productCode, n);
+      const code = n === 1 ? productCode : `${productCode}_V${n}`;
       try {
         const dataUrl = await fileToDataUrl(f);
-        await addFn({ data: { code, imageDataUrl: dataUrl, category: uploadCategory } });
+        const res = await addFn({
+          data: { code, productCode, imageDataUrl: dataUrl, category: uploadCategory },
+        });
+        if (res?.action === "updated") updated++;
+        else created++;
         setUploadQueue((prev) => {
           const c = [...prev];
           c[i] = { ...c[i], status: "ok" };
           return c;
         });
       } catch (err) {
+        const message = err instanceof Error ? err.message : "erro";
+        errs.push({ code, message });
         setUploadQueue((prev) => {
           const c = [...prev];
-          c[i] = { ...c[i], status: "error", msg: err instanceof Error ? err.message : "erro" };
+          c[i] = { ...c[i], status: "error", msg: message };
           return c;
         });
       }
       setProgress({ done: i + 1, total: files.length });
     }
     setUploading(false);
+    setSyncReport({
+      created,
+      updated,
+      removed: 0,
+      embeddingsCreated: created,
+      embeddingsUpdated: updated,
+      embeddingsRemoved: 0,
+      errors: errs,
+    });
     qc.invalidateQueries({ queryKey: ["all-pieces"] });
     qc.invalidateQueries({ queryKey: ["pieces-count"] });
-    toast.success("Upload concluído");
+    qc.invalidateQueries({ queryKey: ["index-health"] });
+    toast.success(
+      `Sincronização: ${created} adicionada(s), ${updated} atualizada(s), ${errs.length} erro(s)`,
+    );
   }
+
 
   if (role && !role.isAdmin) {
     return (
