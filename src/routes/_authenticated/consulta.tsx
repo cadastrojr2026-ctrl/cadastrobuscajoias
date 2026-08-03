@@ -183,8 +183,14 @@ function ConsultaPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
+      const shapeDataUrl = await normalizeForShapeSearch(dataUrl);
       const rows = (await searchImage({
-        data: { imageDataUrl: dataUrl, limit: imageLimit, category: category || undefined },
+        data: {
+          imageDataUrl: dataUrl,
+          shapeDataUrl,
+          limit: imageLimit,
+          category: category || undefined,
+        },
       })) as Piece[];
       setResults(rows);
       hydrateUrls(rows);
