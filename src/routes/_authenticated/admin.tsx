@@ -8,12 +8,23 @@ import {
   deletePiece,
   getMyRole,
   listAllPieces,
+  renamePiece,
 } from "@/lib/pieces.functions";
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
-import { Trash2, Loader2, FolderUp, Check, X, UserCheck, RefreshCw } from "lucide-react";
+import {
+  Trash2,
+  Loader2,
+  FolderUp,
+  Check,
+  X,
+  UserCheck,
+  RefreshCw,
+  Pencil,
+} from "lucide-react";
 import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
