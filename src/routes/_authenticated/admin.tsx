@@ -22,8 +22,12 @@ import {
   UserCheck,
   RefreshCw,
   Pencil,
+  Eraser,
+
 } from "lucide-react";
 import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
+import { applyCodeCleanup, previewCodeCleanup } from "@/lib/code-cleanup.functions";
+
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -81,7 +85,10 @@ function AdminPage() {
   const setApprovalFn = useServerFn(setApprovalStatus);
   const healthFn = useServerFn(getIndexHealth);
   const syncFn = useServerFn(syncIndexIncremental);
+  const previewCleanFn = useServerFn(previewCodeCleanup);
+  const applyCleanFn = useServerFn(applyCodeCleanup);
   const qc = useQueryClient();
+
 
   const [filter, setFilter] = useState<string>("");
   const [uploadCategory, setUploadCategory] = useState<string>("anel");
@@ -197,6 +204,56 @@ function AdminPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
+
+  // ---- Limpeza de peso/valor no código ----
+  const [cleanPreview, setCleanPreview] = useState<{
+    total: number;
+    affected: number;
+    conflicts: number;
+    sample: { from: string; to: string }[];
+  } | null>(null);
+  const [cleanProgress, setCleanProgress] = useState<{
+    renamed: number;
+    conflictsResolved: number;
+    remaining: number;
+    errors: { code: string; message: string }[];
+    running: boolean;
+  } | null>(null);
+
+  const previewCleanMut = useMutation({
+    mutationFn: () => previewCleanFn(),
+    onSuccess: (r) => {
+      setCleanPreview(r);
+      if (r.affected === 0) toast.success("Nenhum código com peso/valor encontrado");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  async function runCleanup() {
+    setCleanProgress({ renamed: 0, conflictsResolved: 0, remaining: 0, errors: [], running: true });
+    let renamed = 0;
+    let conflictsResolved = 0;
+    let errors: { code: string; message: string }[] = [];
+    try {
+      for (let i = 0; i < 40; i++) {
+        const r = await applyCleanFn({ data: { limit: 150 } });
+        renamed += r.renamed;
+        conflictsResolved += r.conflictsResolved;
+        errors = [...errors, ...r.errors].slice(0, 50);
+        setCleanProgress({ renamed, conflictsResolved, remaining: r.remaining, errors, running: r.remaining > 0 });
+        if (r.remaining === 0 || r.processed === 0) break;
+      }
+      toast.success(`${renamed} código(s) limpo(s) · ${errors.length} erro(s)`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setCleanProgress((p) => (p ? { ...p, running: false } : p));
+      setUrls({});
+      qc.invalidateQueries({ queryKey: ["all-pieces"] });
+      previewCleanMut.mutate();
+    }
+  }
+
 
 
   const approveMut = useMutation({
@@ -428,6 +485,81 @@ function AdminPage() {
           </div>
         )}
       </section>
+
+      {/* Limpeza de peso/valor no código */}
+      <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <Eraser className="h-5 w-5 text-[color:var(--gold)]" />
+            <h2 className="serif text-xl gold-text">Limpar peso do código</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => previewCleanMut.mutate()}
+              disabled={previewCleanMut.isPending || cleanProgress?.running}
+              className="flex items-center gap-2 rounded-lg border border-[color:var(--gold)]/40 px-4 py-2 text-xs font-medium hover:bg-[color:var(--gold)]/10 disabled:opacity-60"
+            >
+              {previewCleanMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Pré-visualizar
+            </button>
+            <button
+              onClick={() => runCleanup()}
+              disabled={!cleanPreview || cleanPreview.affected === 0 || cleanProgress?.running}
+              className="flex items-center gap-2 rounded-lg gold-gradient px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60 hover:brightness-110 transition"
+            >
+              {cleanProgress?.running ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Aplicar
+            </button>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Remove do código apenas o peso/valor no final (ex.: PGD00622_-_(4,85) → PGD00622). Sufixos
+          como (2), (6MM) ou (ADEMAR) são preservados. Os embeddings não são afetados.
+        </p>
+        {cleanPreview && (
+          <div className="mt-4 rounded-lg border border-border bg-background/50 p-4 text-xs space-y-1">
+            <div className="font-semibold text-[color:var(--gold)] mb-1">Pré-visualização</div>
+            <div>Peças no catálogo: {cleanPreview.total}</div>
+            <div>Peças a renomear: {cleanPreview.affected}</div>
+            <div>Conflitos de código (vira foto adicional do produto): {cleanPreview.conflicts}</div>
+            {cleanPreview.sample.length > 0 && (
+              <ul className="mt-2 max-h-40 overflow-auto space-y-0.5">
+                {cleanPreview.sample.map((s) => (
+                  <li key={s.from} className="text-muted-foreground">
+                    {s.from} <span className="text-[color:var(--gold)]">→</span> {s.to}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {cleanProgress && (
+          <div className="mt-4 rounded-lg border border-border bg-background/50 p-4 text-xs space-y-1">
+            <div className="font-semibold text-[color:var(--gold)] mb-1">Relatório da limpeza</div>
+            <div>Códigos limpos: {cleanProgress.renamed}</div>
+            <div>Conflitos resolvidos: {cleanProgress.conflictsResolved}</div>
+            <div>Restantes: {cleanProgress.remaining}</div>
+            <div>Erros: {cleanProgress.errors.length}</div>
+            {cleanProgress.errors.length > 0 && (
+              <ul className="mt-1 max-h-32 overflow-auto text-destructive">
+                {cleanProgress.errors.map((e, i) => (
+                  <li key={`${e.code}-${i}`}>
+                    {e.code}: {e.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="pt-1">
+              Status:{" "}
+              <span className={cleanProgress.running ? "text-muted-foreground" : "text-[color:var(--gold)]"}>
+                {cleanProgress.running ? "Em andamento…" : "Concluído"}
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
+
+
 
       {/* Approvals section */}
       <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">
