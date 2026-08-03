@@ -33,6 +33,18 @@ async function embedImage(dataUrl: string, hint: string): Promise<number[]> {
   return json.data[0].embedding;
 }
 
+const SHAPE_HINT =
+  "Jewelry piece identification by GEOMETRY ONLY. The query may be an unplated raw casting (brass/silver-colored, matte) while the catalog item is the same model finished with gold plating. Match strictly on outline, silhouette, contour, proportions, structure, number and arrangement of elements, stone settings shape and layout. Completely ignore color, hue, metal tone, plating, polish, gloss, reflections, specular highlights, shadows, background and lighting.";
+
+type MatchRow = {
+  id: string;
+  code: string;
+  name: string | null;
+  image_path: string;
+  category: string | null;
+  similarity: number;
+};
+
 // PUBLIC-ISH: authenticated user can search
 export const searchByImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -40,28 +52,55 @@ export const searchByImage = createServerFn({ method: "POST" })
     z
       .object({
         imageDataUrl: z.string().min(20),
+        // versão da mesma foto normalizada no cliente (cinza, sem fundo/iluminação)
+        shapeDataUrl: z.string().min(20).optional(),
         limit: z.number().min(1).max(80).default(36),
         category: z.string().optional(),
       })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const emb = await embedImage(data.imageDataUrl, "Jewelry product photo. Focus on shape, silhouette, setting and overall design. Ignore stone or gem color.");
-    const { data: matches, error } = await context.supabase.rpc("match_pieces", {
-      query_embedding: emb as unknown as string,
-      match_count: data.limit,
-      filter_category: data.category ?? null,
-    } as never);
-    if (error) throw new Error(error.message);
-    const rows = (matches ?? []) as Array<{
-      id: string;
-      code: string;
-      name: string | null;
-      image_path: string;
-      category: string | null;
-      similarity: number;
-    }>;
-    if (rows.length === 0) return [] as Array<(typeof rows)[number] & { created_at: string | null }>;
+    const variants: Array<{ url: string; weight: number }> = [
+      { url: data.imageDataUrl, weight: 1 },
+    ];
+    if (data.shapeDataUrl && data.shapeDataUrl !== data.imageDataUrl) {
+      variants.push({ url: data.shapeDataUrl, weight: 1.35 });
+    }
+
+    const pool = Math.min(80, Math.max(data.limit * 2, data.limit + 24));
+
+    const runs = await Promise.all(
+      variants.map(async (v) => {
+        const emb = await embedImage(v.url, SHAPE_HINT);
+        const { data: matches, error } = await context.supabase.rpc("match_pieces", {
+          query_embedding: emb as unknown as string,
+          match_count: pool,
+          filter_category: data.category ?? null,
+        } as never);
+        if (error) throw new Error(error.message);
+        return { weight: v.weight, rows: (matches ?? []) as MatchRow[] };
+      }),
+    );
+
+    // Fusão de rankings (RRF ponderada): favorece peças que aparecem bem
+    // colocadas tanto na foto original quanto na versão focada em formato.
+    const scores = new Map<string, number>();
+    const best = new Map<string, MatchRow>();
+    for (const run of runs) {
+      run.rows.forEach((row, idx) => {
+        scores.set(row.id, (scores.get(row.id) ?? 0) + run.weight / (12 + idx));
+        const prev = best.get(row.id);
+        if (!prev || row.similarity > prev.similarity) best.set(row.id, row);
+      });
+    }
+
+    const rows = [...scores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, data.limit)
+      .map(([id]) => best.get(id)!)
+      .filter(Boolean);
+
+    if (rows.length === 0) return [] as Array<MatchRow & { created_at: string | null }>;
     const ids = rows.map((r) => r.id);
     const { data: meta } = await context.supabase
       .from("pieces")
@@ -71,6 +110,7 @@ export const searchByImage = createServerFn({ method: "POST" })
     for (const m of meta ?? []) map.set(m.id, m.created_at as unknown as string);
     return rows.map((r) => ({ ...r, created_at: map.get(r.id) ?? null }));
   });
+
 
 export const searchByText = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
