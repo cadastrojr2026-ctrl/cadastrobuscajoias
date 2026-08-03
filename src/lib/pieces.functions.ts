@@ -194,6 +194,8 @@ export const addPiece = createServerFn({ method: "POST" })
     z
       .object({
         code: z.string().min(1).max(50),
+        // produto ao qual esta foto pertence (permite várias fotos por produto)
+        productCode: z.string().min(1).max(50).optional(),
         name: z.string().max(120).optional(),
         category: z.string().max(40).optional(),
         imageDataUrl: z.string().min(20),
@@ -209,11 +211,19 @@ export const addPiece = createServerFn({ method: "POST" })
     if (!role) throw new Error("Apenas administradores podem cadastrar peças.");
 
     const code = data.code.trim().toUpperCase();
+    const productCode = (data.productCode ?? code).trim().toUpperCase();
     const match = data.imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
     if (!match) throw new Error("Formato de imagem inválido.");
     const mime = match[1];
     const ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
     const bytes = Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0));
+
+    // Atualização incremental: descobre se a peça já existe (substituição)
+    const { data: existing } = await context.supabase
+      .from("pieces")
+      .select("id, image_path")
+      .eq("code", code)
+      .maybeSingle();
 
     const path = `${code}.${ext}`;
     const { error: upErr } = await context.supabase.storage
@@ -221,11 +231,17 @@ export const addPiece = createServerFn({ method: "POST" })
       .upload(path, bytes, { contentType: mime, upsert: true });
     if (upErr) throw new Error(`Upload: ${upErr.message}`);
 
-    const emb = await embedImage(data.imageDataUrl, `Jewelry ${data.category ?? "piece"}, code ${code}`);
+    // Imagem substituída com outra extensão: remove o arquivo antigo
+    if (existing?.image_path && existing.image_path !== path) {
+      await context.supabase.storage.from("pieces").remove([existing.image_path]);
+    }
+
+    const emb = await embedImage(data.imageDataUrl, `${SHAPE_HINT} Catalog item code ${code}.`);
 
     const { error: insErr } = await context.supabase.from("pieces").upsert(
       {
         code,
+        product_code: productCode,
         name: data.name ?? null,
         category: data.category ?? "anel",
         image_path: path,
@@ -235,8 +251,14 @@ export const addPiece = createServerFn({ method: "POST" })
       { onConflict: "code" },
     );
     if (insErr) throw new Error(insErr.message);
-    return { ok: true, code };
+    return {
+      ok: true,
+      code,
+      productCode,
+      action: existing ? ("updated" as const) : ("created" as const),
+    };
   });
+
 
 export const deletePiece = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
