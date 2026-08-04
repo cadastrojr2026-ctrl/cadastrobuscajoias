@@ -1,0 +1,1 @@
+ALTER TABLE public.user_approvals DROP COLUMN IF EXISTS notified_at;
