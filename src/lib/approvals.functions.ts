@@ -6,50 +6,24 @@ export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 // Ensure an approval row exists for the current user (safety net in case
 // the auth trigger did not fire). New users get 'pending'.
-// Also notifies the admin on WhatsApp once per pending request.
 export const ensureMyApproval = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const email = (context.claims.email as string | undefined) ?? "";
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const { data: existing } = await context.supabase
       .from("user_approvals")
       .select("status")
       .eq("user_id", context.userId)
       .maybeSingle();
+    if (existing) return { status: existing.status as ApprovalStatus };
 
-    if (!existing) {
-      await supabaseAdmin.from("user_approvals").insert({
-        user_id: context.userId,
-        email,
-        status: "pending",
-      });
-    }
-
-    const status = (existing?.status ?? "pending") as ApprovalStatus;
-
-    // Notify the admin only once, and only while the request is pending.
-    if (status === "pending") {
-      const { data: row } = await supabaseAdmin
-        .from("user_approvals")
-        .select("notified_at, email")
-        .eq("user_id", context.userId)
-        .maybeSingle();
-
-      if (row && !row.notified_at) {
-        const { sendWhatsAppAccessRequest } = await import("@/lib/notify.server");
-        const result = await sendWhatsAppAccessRequest(row.email || email);
-        if (result.sent) {
-          await supabaseAdmin
-            .from("user_approvals")
-            .update({ notified_at: new Date().toISOString() })
-            .eq("user_id", context.userId);
-        }
-      }
-    }
-
-    return { status };
+    const email = (context.claims.email as string | undefined) ?? "";
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("user_approvals").insert({
+      user_id: context.userId,
+      email,
+      status: "pending",
+    });
+    return { status: "pending" as ApprovalStatus };
   });
 
 

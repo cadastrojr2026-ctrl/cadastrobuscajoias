@@ -91,7 +91,6 @@ export type Database = {
           approved_by: string | null
           created_at: string
           email: string
-          notified_at: string | null
           status: string
           updated_at: string
           user_id: string
@@ -101,7 +100,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           email: string
-          notified_at?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -111,7 +109,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           email?: string
-          notified_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string
