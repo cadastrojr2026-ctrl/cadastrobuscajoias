@@ -1,0 +1,1 @@
+ALTER TABLE public.user_approvals ADD COLUMN IF NOT EXISTS notified_at timestamptz;
