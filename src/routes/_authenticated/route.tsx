@@ -8,7 +8,9 @@ import { LogOut, Search, ShieldCheck, ArrowUp, Sun, Moon, Menu, X } from "lucide
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
+import { usePendingApprovalsNotifier } from "@/hooks/use-pending-approvals";
 import logoJr from "@/assets/marca-jr-joias.png";
+
 
 
 
