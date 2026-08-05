@@ -56,6 +56,7 @@ const CATEGORIES = [
   { value: "gaf", label: "GAF" },
   { value: "gargantilha", label: "Gargantilhas" },
   { value: "pingente", label: "Pingentes" },
+  { value: "pulseira_feminina", label: "Pulseiras Femininas" },
   { value: "pulseira_infantil", label: "Pulseiras Infantis" },
 ] as const;
 
