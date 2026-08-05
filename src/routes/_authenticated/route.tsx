@@ -8,7 +8,9 @@ import { LogOut, Search, ShieldCheck, ArrowUp, Sun, Moon, Menu, X } from "lucide
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
+import { usePendingApprovalsNotifier } from "@/hooks/use-pending-approvals";
 import logoJr from "@/assets/marca-jr-joias.png";
+
 
 
 
@@ -87,9 +89,12 @@ function AuthedLayout() {
 
 function SiteHeader({ isAdmin, onSignOut }: { isAdmin: boolean; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
+  const { data: pending } = usePendingApprovalsNotifier(isAdmin);
+  const pendingCount = pending?.count ?? 0;
 
   const navLinkClass =
     "text-[13px] uppercase tracking-[0.14em] text-white/85 hover:text-[#d8b25f] transition-colors data-[status=active]:text-[#d8b25f]";
+
 
   return (
     <header className="sticky top-0 z-30">
@@ -122,9 +127,18 @@ function SiteHeader({ isAdmin, onSignOut }: { isAdmin: boolean; onSignOut: () =>
               {isAdmin && (
                 <>
                   <span className="h-1 w-1 rounded-full bg-[#d8b25f]/70" aria-hidden />
-                  <Link to="/admin" className={navLinkClass} activeProps={{ "data-status": "active" }}>
+                  <Link to="/admin" className={`${navLinkClass} inline-flex items-center gap-2`} activeProps={{ "data-status": "active" }}>
                     Admin
+                    {pendingCount > 0 && (
+                      <span
+                        title={`${pendingCount} pedido(s) de acesso pendente(s)`}
+                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#d8b25f] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+                      >
+                        {pendingCount}
+                      </span>
+                    )}
                   </Link>
+
                 </>
               )}
             </nav>
@@ -169,6 +183,12 @@ function SiteHeader({ isAdmin, onSignOut }: { isAdmin: boolean; onSignOut: () =>
                 activeProps={{ "data-status": "active" }}
               >
                 <ShieldCheck className="h-4 w-4" /> Admin
+                {pendingCount > 0 && (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#d8b25f] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black">
+                    {pendingCount}
+                  </span>
+                )}
+
               </Link>
             )}
             <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">

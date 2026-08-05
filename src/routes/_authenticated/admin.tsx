@@ -11,6 +11,8 @@ import {
   renamePiece,
 } from "@/lib/pieces.functions";
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
+import { usePendingApprovals } from "@/hooks/use-pending-approvals";
+
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
 import {
@@ -116,12 +118,9 @@ function AdminPage() {
     enabled: role?.isAdmin === true,
     refetchInterval: 15_000,
   });
-  const { data: pendingCount = [] } = useQuery({
-    queryKey: ["approvals", "pending"],
-    queryFn: () => approvalsFn({ data: { status: "pending" } }),
-    enabled: role?.isAdmin === true,
-    refetchInterval: 15_000,
-  });
+  const { data: pending } = usePendingApprovals(role?.isAdmin === true);
+  const pendingTotal = pending?.count ?? 0;
+
 
   const [urls, setUrls] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -567,11 +566,12 @@ function AdminPage() {
           <div className="flex items-center gap-2">
             <UserCheck className="h-5 w-5 text-[color:var(--gold)]" />
             <h2 className="serif text-xl gold-text">Aprovações de acesso</h2>
-            {pendingCount.length > 0 && (
+            {pendingTotal > 0 && (
               <span className="ml-2 rounded-full bg-[color:var(--gold)]/20 text-[color:var(--gold)] text-xs px-2 py-0.5">
-                {pendingCount.length} pendente(s)
+                {pendingTotal} pendente(s)
               </span>
             )}
+
           </div>
           <div className="flex gap-2">
             {(["pending", "approved", "rejected"] as const).map((s) => (
