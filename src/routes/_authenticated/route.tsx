@@ -87,9 +87,12 @@ function AuthedLayout() {
 
 function SiteHeader({ isAdmin, onSignOut }: { isAdmin: boolean; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
+  const { data: pending } = usePendingApprovalsNotifier(isAdmin);
+  const pendingCount = pending?.count ?? 0;
 
   const navLinkClass =
     "text-[13px] uppercase tracking-[0.14em] text-white/85 hover:text-[#d8b25f] transition-colors data-[status=active]:text-[#d8b25f]";
+
 
   return (
     <header className="sticky top-0 z-30">
