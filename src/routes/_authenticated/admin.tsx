@@ -116,12 +116,9 @@ function AdminPage() {
     enabled: role?.isAdmin === true,
     refetchInterval: 15_000,
   });
-  const { data: pendingCount = [] } = useQuery({
-    queryKey: ["approvals", "pending"],
-    queryFn: () => approvalsFn({ data: { status: "pending" } }),
-    enabled: role?.isAdmin === true,
-    refetchInterval: 15_000,
-  });
+  const { data: pending } = usePendingApprovals(role?.isAdmin === true);
+  const pendingTotal = pending?.count ?? 0;
+
 
   const [urls, setUrls] = useState<Record<string, string>>({});
   useEffect(() => {
