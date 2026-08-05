@@ -26,6 +26,29 @@ export const ensureMyApproval = createServerFn({ method: "POST" })
     return { status: "pending" as ApprovalStatus };
   });
 
+export const countPendingApprovals = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: role } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!role) return { count: 0, latestEmail: null as string | null, latestAt: null as string | null };
+    const { data, error, count } = await context.supabase
+      .from("user_approvals")
+      .select("email, created_at", { count: "exact" })
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (error) throw new Error(error.message);
+    const latest = data?.[0] ?? null;
+    return {
+      count: count ?? 0,
+      latestEmail: (latest?.email ?? null) as string | null,
+      latestAt: (latest?.created_at ?? null) as string | null,
+    };
+  });
+
 
 export const getMyApprovalStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
