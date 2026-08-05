@@ -11,6 +11,8 @@ import {
   renamePiece,
 } from "@/lib/pieces.functions";
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
+import { usePendingApprovals } from "@/hooks/use-pending-approvals";
+
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
 import {
