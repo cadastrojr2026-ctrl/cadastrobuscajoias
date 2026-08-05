@@ -183,6 +183,12 @@ function SiteHeader({ isAdmin, onSignOut }: { isAdmin: boolean; onSignOut: () =>
                 activeProps={{ "data-status": "active" }}
               >
                 <ShieldCheck className="h-4 w-4" /> Admin
+                {pendingCount > 0 && (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#d8b25f] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black">
+                    {pendingCount}
+                  </span>
+                )}
+
               </Link>
             )}
             <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
