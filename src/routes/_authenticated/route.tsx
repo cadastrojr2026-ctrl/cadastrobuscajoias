@@ -127,9 +127,18 @@ function SiteHeader({ isAdmin, onSignOut }: { isAdmin: boolean; onSignOut: () =>
               {isAdmin && (
                 <>
                   <span className="h-1 w-1 rounded-full bg-[#d8b25f]/70" aria-hidden />
-                  <Link to="/admin" className={navLinkClass} activeProps={{ "data-status": "active" }}>
+                  <Link to="/admin" className={`${navLinkClass} inline-flex items-center gap-2`} activeProps={{ "data-status": "active" }}>
                     Admin
+                    {pendingCount > 0 && (
+                      <span
+                        title={`${pendingCount} pedido(s) de acesso pendente(s)`}
+                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#d8b25f] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+                      >
+                        {pendingCount}
+                      </span>
+                    )}
                   </Link>
+
                 </>
               )}
             </nav>
