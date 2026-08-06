@@ -105,6 +105,14 @@ function AdminPage() {
     queryFn: () => listFn({ data: { category: filter || undefined } }) as Promise<Piece[]>,
     enabled: role?.isAdmin === true,
   });
+  const q = query.trim().toLowerCase();
+  const visiblePieces =
+    q === ""
+      ? pieces
+      : pieces.filter(
+          (p) =>
+            p.code.toLowerCase().includes(q) || (p.name ?? "").toLowerCase().includes(q),
+        );
   const { data: counts } = useQuery({
     queryKey: ["pieces-count"],
     queryFn: () => countFn(),
