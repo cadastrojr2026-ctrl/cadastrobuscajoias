@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Pencil,
   Eraser,
+  Search,
 
 } from "lucide-react";
 import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
@@ -94,6 +95,7 @@ function AdminPage() {
 
 
   const [filter, setFilter] = useState<string>("");
+  const [query, setQuery] = useState<string>("");
   const [uploadCategory, setUploadCategory] = useState<string>("anel");
   const [approvalTab, setApprovalTab] = useState<"pending" | "approved" | "rejected">("pending");
 
