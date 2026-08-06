@@ -715,7 +715,7 @@ function AdminPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {pieces.map((p) => (
+          {visiblePieces.map((p) => (
             <div key={p.id} className="group rounded-lg overflow-hidden border border-border bg-card">
               <div className="aspect-square bg-background/60 relative">
                 {urls[p.image_path] ? (
