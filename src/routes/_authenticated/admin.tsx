@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Pencil,
   Eraser,
+  Search,
 
 } from "lucide-react";
 import { getIndexHealth, syncIndexIncremental } from "@/lib/index-sync.functions";
@@ -94,6 +95,7 @@ function AdminPage() {
 
 
   const [filter, setFilter] = useState<string>("");
+  const [query, setQuery] = useState<string>("");
   const [uploadCategory, setUploadCategory] = useState<string>("anel");
   const [approvalTab, setApprovalTab] = useState<"pending" | "approved" | "rejected">("pending");
 
@@ -103,6 +105,14 @@ function AdminPage() {
     queryFn: () => listFn({ data: { category: filter || undefined } }) as Promise<Piece[]>,
     enabled: role?.isAdmin === true,
   });
+  const q = query.trim().toLowerCase();
+  const visiblePieces =
+    q === ""
+      ? pieces
+      : pieces.filter(
+          (p) =>
+            p.code.toLowerCase().includes(q) || (p.name ?? "").toLowerCase().includes(q),
+        );
   const { data: counts } = useQuery({
     queryKey: ["pieces-count"],
     queryFn: () => countFn(),
@@ -664,6 +674,37 @@ function AdminPage() {
         ))}
       </div>
 
+      <div className="mb-6 rounded-lg border border-[color:var(--gold)]/30 bg-card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Search className="h-4 w-4 text-[color:var(--gold)]" />
+          <h2 className="serif text-lg gold-text">Buscar peça para identificar ou apagar</h2>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Digite o código ou nome da peça (ex.: PGD00622)"
+            className="w-full rounded-md border border-border bg-background pl-9 pr-24 py-2 text-sm outline-none focus:border-[color:var(--gold)]"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {query.trim()
+            ? `${visiblePieces.length} peça(s) encontrada(s) — passe o mouse na foto para renomear ou apagar.`
+            : "A busca considera a categoria selecionada acima."}
+        </p>
+      </div>
+
+
+
 
       {uploading && (
         <div className="mb-6 rounded-lg border border-[color:var(--gold)]/40 bg-card p-4">
@@ -705,7 +746,7 @@ function AdminPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {pieces.map((p) => (
+          {visiblePieces.map((p) => (
             <div key={p.id} className="group rounded-lg overflow-hidden border border-border bg-card">
               <div className="aspect-square bg-background/60 relative">
                 {urls[p.image_path] ? (
