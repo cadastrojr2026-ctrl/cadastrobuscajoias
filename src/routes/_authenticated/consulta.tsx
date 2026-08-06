@@ -60,6 +60,7 @@ const CATEGORIES = [
   { value: "anel", label: "Anéis", icon: Circle },
   { value: "argola", label: "Argolas", icon: CircleDashed },
   { value: "brinco_fixo", label: "Brincos Fixos", icon: Gem },
+  { value: "brinco_infantil", label: "Brincos Infantis", icon: Gem },
   { value: "brinco_medio", label: "Brincos Médios", icon: Gem },
   { value: "cmb", label: "CMB", icon: LinkIcon },
   { value: "gaf", label: "GAF", icon: NecklaceIcon },

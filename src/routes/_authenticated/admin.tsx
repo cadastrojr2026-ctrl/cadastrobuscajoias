@@ -52,6 +52,7 @@ const CATEGORIES = [
   { value: "anel", label: "Anéis" },
   { value: "argola", label: "Argolas" },
  { value: "brinco_fixo", label: "Brincos Fixos" },
+ { value: "brinco_infantil", label: "Brincos Infantis" },
  { value: "brinco_medio", label: "Brincos Médios" },
   { value: "cmb", label: "CMB" },
   { value: "gaf", label: "GAF" },
