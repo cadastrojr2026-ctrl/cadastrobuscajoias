@@ -12,6 +12,7 @@ import {
 } from "@/lib/pieces.functions";
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
 import { usePendingApprovals } from "@/hooks/use-pending-approvals";
+import { ReindexPanel } from "@/components/reindex-panel";
 
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
@@ -316,8 +317,10 @@ function AdminPage() {
       const code = n === 1 ? productCode : `${productCode}_V${n}`;
       try {
         const dataUrl = await fileToDataUrl(f);
+        const { embedImageSource } = await import("@/lib/dino.client");
+        const embeddingV2 = await embedImageSource(dataUrl);
         const res = await addFn({
-          data: { code, productCode, imageDataUrl: dataUrl, category: uploadCategory },
+          data: { code, productCode, imageDataUrl: dataUrl, category: uploadCategory, embeddingV2 },
         });
         if (res?.action === "updated") updated++;
         else created++;
@@ -430,6 +433,8 @@ function AdminPage() {
           }}
         />
       </div>
+
+      <ReindexPanel />
 
       {/* Sincronização do índice de busca por imagem */}
       <section className="mb-8 rounded-xl border border-border bg-card/60 backdrop-blur p-5">

@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { searchByImage, searchByText } from "@/lib/pieces.functions";
-import { normalizeForShapeSearch } from "@/lib/image-prep";
+import { searchByText } from "@/lib/pieces.functions";
+import { searchByVectorV2 } from "@/lib/vector.functions";
 import {
   listFavorites,
   listFavoriteIds,
@@ -93,7 +93,7 @@ function Divider() {
 }
 
 function ConsultaPage() {
-  const searchImage = useServerFn(searchByImage);
+  const searchVector = useServerFn(searchByVectorV2);
   const searchText = useServerFn(searchByText);
   const listFavs = useServerFn(listFavorites);
   const listFavIds = useServerFn(listFavoriteIds);
@@ -186,11 +186,11 @@ function ConsultaPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
-      const shapeDataUrl = await normalizeForShapeSearch(dataUrl);
-      const rows = (await searchImage({
+      const { embedImageSource } = await import("@/lib/dino.client");
+      const vector = await embedImageSource(dataUrl);
+      const rows = (await searchVector({
         data: {
-          imageDataUrl: dataUrl,
-          shapeDataUrl,
+          vectors: [{ vector, weight: 1 }],
           limit: imageLimit,
           category: category || undefined,
         },
@@ -203,6 +203,7 @@ function ConsultaPage() {
       setLoading(false);
     }
   }
+
 
   function clearSearch() {
     setResults([]);
