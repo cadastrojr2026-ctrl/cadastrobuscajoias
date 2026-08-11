@@ -1,0 +1,168 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+
+type MatchRow = {
+  id: string;
+  code: string;
+  name: string | null;
+  image_path: string;
+  category: string | null;
+  product_code?: string | null;
+  similarity: number;
+};
+
+const vectorSchema = z.array(z.number()).length(384);
+
+/**
+ * Busca por imagem usando o índice v2 (vetores gerados no navegador).
+ * O servidor não gera embeddings — apenas compara os vetores recebidos.
+ */
+export const searchByVectorV2 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        vectors: z
+          .array(z.object({ vector: vectorSchema, weight: z.number().min(0).max(5).default(1) }))
+          .min(1)
+          .max(3),
+        limit: z.number().min(1).max(80).default(36),
+        category: z.string().optional(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const pool = Math.min(80, Math.max(data.limit * 2, data.limit + 24));
+
+    const runs = await Promise.all(
+      data.vectors.map(async (v) => {
+        const { data: matches, error } = await context.supabase.rpc("match_pieces_v2", {
+          query_embedding: JSON.stringify(v.vector) as unknown as string,
+          match_count: pool,
+          filter_category: data.category ?? null,
+        } as never);
+        if (error) throw new Error(error.message);
+        return { weight: v.weight, rows: (matches ?? []) as MatchRow[] };
+      }),
+    );
+
+    // Fusão de rankings ponderada (RRF)
+    const scores = new Map<string, number>();
+    const best = new Map<string, MatchRow>();
+    for (const run of runs) {
+      run.rows.forEach((row, idx) => {
+        scores.set(row.id, (scores.get(row.id) ?? 0) + run.weight / (12 + idx));
+        const prev = best.get(row.id);
+        if (!prev || row.similarity > prev.similarity) best.set(row.id, row);
+      });
+    }
+
+    const seenProduct = new Set<string>();
+    const rows = [...scores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => best.get(id)!)
+      .filter(Boolean)
+      .filter((r) => {
+        const key = r.product_code || r.code;
+        if (seenProduct.has(key)) return false;
+        seenProduct.add(key);
+        return true;
+      })
+      .slice(0, data.limit);
+
+    if (rows.length === 0) return [] as Array<MatchRow & { created_at: string | null }>;
+    const ids = rows.map((r) => r.id);
+    const { data: meta } = await context.supabase
+      .from("pieces")
+      .select("id, created_at")
+      .in("id", ids);
+    const map = new Map<string, string>();
+    for (const m of meta ?? []) map.set(m.id, m.created_at as unknown as string);
+    return rows.map((r) => ({ ...r, created_at: map.get(r.id) ?? null }));
+  });
+
+/** Progresso da reindexação (quantas peças já têm vetor no índice novo). */
+export const getIndexV2Stats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.rpc("index_v2_stats" as never);
+    if (error) throw new Error(error.message);
+    const row = (Array.isArray(data) ? data[0] : data) as { total: number; indexed: number } | null;
+    return { total: Number(row?.total ?? 0), indexed: Number(row?.indexed ?? 0) };
+  });
+
+async function assertAdmin(context: { supabase: any; userId: string }) {
+  const { data: role } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (!role) throw new Error("Apenas administradores podem reindexar.");
+}
+
+/** Lote de peças ainda sem vetor no índice novo, com links temporários das fotos. */
+export const nextReindexBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ size: z.number().min(1).max(50).default(20) }).parse(i))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { data: rows, error } = await context.supabase
+      .from("pieces")
+      .select("id, code, image_path")
+      .is("embedding_v2", null)
+      .limit(data.size);
+    if (error) throw new Error(error.message);
+    const list = rows ?? [];
+    if (list.length === 0) return { items: [] as Array<{ id: string; code: string; url: string }> };
+
+    const { data: signed, error: sErr } = await context.supabase.storage
+      .from("pieces")
+      .createSignedUrls(
+        list.map((r) => r.image_path),
+        3600,
+      );
+    if (sErr) throw new Error(sErr.message);
+
+    const items = list
+      .map((r, idx) => ({ id: r.id, code: r.code, url: signed?.[idx]?.signedUrl ?? "" }))
+      .filter((r) => r.url);
+    return { items };
+  });
+
+/** Grava os vetores calculados no navegador. */
+export const saveVectorsV2 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        items: z.array(z.object({ id: z.string().uuid(), vector: vectorSchema })).min(1).max(50),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    let saved = 0;
+    for (const item of data.items) {
+      const { error } = await context.supabase
+        .from("pieces")
+        .update({ embedding_v2: JSON.stringify(item.vector) as unknown as string })
+        .eq("id", item.id);
+      if (error) throw new Error(error.message);
+      saved++;
+    }
+    return { saved };
+  });
+
+/** Marca uma peça como não indexada (usado quando a foto muda). */
+export const clearVectorV2 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { error } = await context.supabase
+      .from("pieces")
+      .update({ embedding_v2: null })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
