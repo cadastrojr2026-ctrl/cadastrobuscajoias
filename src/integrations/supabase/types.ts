@@ -51,6 +51,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           embedding: string | null
+          embedding_v2: string | null
           id: string
           image_path: string
           name: string | null
@@ -64,6 +65,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           embedding?: string | null
+          embedding_v2?: string | null
           id?: string
           image_path: string
           name?: string | null
@@ -77,6 +79,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           embedding?: string | null
+          embedding_v2?: string | null
           id?: string
           image_path?: string
           name?: string | null
@@ -148,6 +151,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      index_v2_stats: {
+        Args: never
+        Returns: {
+          indexed: number
+          total: number
+        }[]
+      }
       match_pieces:
         | {
             Args: { match_count?: number; query_embedding: string }
@@ -175,6 +185,22 @@ export type Database = {
               similarity: number
             }[]
           }
+      match_pieces_v2: {
+        Args: {
+          filter_category?: string
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          category: string
+          code: string
+          id: string
+          image_path: string
+          name: string
+          product_code: string
+          similarity: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
