@@ -199,6 +199,8 @@ export const addPiece = createServerFn({ method: "POST" })
         name: z.string().max(120).optional(),
         category: z.string().max(40).optional(),
         imageDataUrl: z.string().min(20),
+        // vetor visual calculado no navegador (índice v2, gratuito)
+        embeddingV2: z.array(z.number()).length(384).optional(),
       })
       .parse(i),
   )
@@ -236,7 +238,10 @@ export const addPiece = createServerFn({ method: "POST" })
       await context.supabase.storage.from("pieces").remove([existing.image_path]);
     }
 
-    const emb = await embedImage(data.imageDataUrl, `${SHAPE_HINT} Catalog item code ${code}.`);
+    // Sem vetor do navegador, cai no gerador antigo (consome créditos de IA).
+    const legacyEmb = data.embeddingV2
+      ? null
+      : await embedImage(data.imageDataUrl, `${SHAPE_HINT} Catalog item code ${code}.`);
 
     const { error: insErr } = await context.supabase.from("pieces").upsert(
       {
@@ -245,7 +250,10 @@ export const addPiece = createServerFn({ method: "POST" })
         name: data.name ?? null,
         category: data.category ?? "anel",
         image_path: path,
-        embedding: emb as unknown as string,
+        ...(legacyEmb ? { embedding: legacyEmb as unknown as string } : {}),
+        ...(data.embeddingV2
+          ? { embedding_v2: JSON.stringify(data.embeddingV2) as unknown as string }
+          : {}),
         created_by: context.userId,
       },
       { onConflict: "code" },
