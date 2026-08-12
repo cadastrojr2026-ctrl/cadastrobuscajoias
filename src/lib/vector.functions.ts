@@ -103,17 +103,31 @@ async function assertAdmin(context: { supabase: any; userId: string }) {
 /** Lote de peças ainda sem vetor no índice novo, com links temporários das fotos. */
 export const nextReindexBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ size: z.number().min(1).max(50).default(20) }).parse(i))
+  .inputValidator((i: unknown) => z.object({ size: z.number().min(1).max(100).default(50) }).parse(i))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
-    const { data: rows, error } = await context.supabase
-      .from("pieces")
-      .select("id, code, image_path")
-      .is("embedding_v2", null)
-      .limit(data.size);
-    if (error) throw new Error(error.message);
-    const list = rows ?? [];
+    // Ponto de partida aleatório: permite reindexar em várias abas/computadores
+    // ao mesmo tempo sem que dois processos peguem as mesmas peças.
+    const nibble = "0123456789abcdef"[Math.floor(Math.random() * 16)];
+    const startId = `${nibble}0000000-0000-0000-0000-000000000000`;
+
+    async function fetchBatch(from: string | null) {
+      let q = context.supabase
+        .from("pieces")
+        .select("id, code, image_path")
+        .is("embedding_v2", null)
+        .order("id", { ascending: true })
+        .limit(data.size);
+      if (from) q = q.gte("id", from);
+      const { data: rows, error } = await q;
+      if (error) throw new Error(error.message);
+      return rows ?? [];
+    }
+
+    let list = await fetchBatch(startId);
+    if (list.length === 0) list = await fetchBatch(null);
     if (list.length === 0) return { items: [] as Array<{ id: string; code: string; url: string }> };
+
 
     const { data: signed, error: sErr } = await context.supabase.storage
       .from("pieces")
@@ -135,22 +149,19 @@ export const saveVectorsV2 = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) =>
     z
       .object({
-        items: z.array(z.object({ id: z.string().uuid(), vector: vectorSchema })).min(1).max(50),
+        items: z.array(z.object({ id: z.string().uuid(), vector: vectorSchema })).min(1).max(100),
       })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
-    let saved = 0;
-    for (const item of data.items) {
-      const { error } = await context.supabase
-        .from("pieces")
-        .update({ embedding_v2: JSON.stringify(item.vector) as unknown as string })
-        .eq("id", item.id);
-      if (error) throw new Error(error.message);
-      saved++;
-    }
-    return { saved };
+    // Gravação em massa: uma única chamada ao banco para todo o lote.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: saved, error } = await supabaseAdmin.rpc("save_vectors_v2" as never, {
+      payload: data.items.map((i) => ({ id: i.id, vector: i.vector })),
+    } as never);
+    if (error) throw new Error(error.message);
+    return { saved: Number(saved ?? data.items.length) };
   });
 
 /** Marca uma peça como não indexada (usado quando a foto muda). */

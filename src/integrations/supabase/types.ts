@@ -201,6 +201,7 @@ export type Database = {
           similarity: number
         }[]
       }
+      save_vectors_v2: { Args: { payload: Json }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "user"
