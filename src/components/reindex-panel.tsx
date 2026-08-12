@@ -43,13 +43,19 @@ export function ReindexPanel() {
       setStatus("Reindexando...");
       let processed = 0;
 
+      const BATCH = 50;
+      // Já pede o próximo lote enquanto o atual é processado (sem tempo morto).
+      let pending = batchFn({ data: { size: BATCH } });
+
       while (!stopRef.current) {
-        const { items } = await batchFn({ data: { size: 20 } });
+        const { items } = await pending;
         if (items.length === 0) {
           setStatus("Reindexação concluída.");
           toast.success("Catálogo totalmente reindexado.");
           break;
         }
+        pending = batchFn({ data: { size: BATCH } });
+
         const payload: Array<{ id: string; vector: number[] }> = [];
         for (const item of items) {
           if (stopRef.current) break;
@@ -61,6 +67,7 @@ export function ReindexPanel() {
           }
         }
         if (payload.length > 0) {
+          // grava o lote inteiro numa única chamada
           await saveFn({ data: { items: payload } });
           processed += payload.length;
           setStatus(`Reindexando... ${processed} peça(s) nesta sessão`);

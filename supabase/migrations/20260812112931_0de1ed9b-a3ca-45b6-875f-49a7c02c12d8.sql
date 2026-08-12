@@ -1,0 +1,1 @@
+revoke execute on function public.save_vectors_v2(jsonb) from authenticated;
