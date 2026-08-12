@@ -317,7 +317,7 @@ function AdminPage() {
       const code = n === 1 ? productCode : `${productCode}_V${n}`;
       try {
         const dataUrl = await fileToDataUrl(f);
-        const { embedImageSource } = await import("@/lib/dino.client");
+        const { embedImageSource } = await import("@/lib/dino-engine");
         const embeddingV2 = await embedImageSource(dataUrl);
         const res = await addFn({
           data: { code, productCode, imageDataUrl: dataUrl, category: uploadCategory, embeddingV2 },
