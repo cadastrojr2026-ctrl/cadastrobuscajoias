@@ -38,7 +38,7 @@ export function ReindexPanel() {
     setErrors(0);
     setStatus("Carregando o modelo visual (só na primeira vez)...");
     try {
-      const { embedImageSource, loadDino } = await import("@/lib/dino.client");
+      const { embedImageSource, loadDino } = await import("@/lib/dino-engine");
       await loadDino();
       setStatus("Reindexando...");
       let processed = 0;

@@ -186,7 +186,7 @@ function ConsultaPage() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
-      const { embedImageSource } = await import("@/lib/dino.client");
+      const { embedImageSource } = await import("@/lib/dino-engine");
       const vector = await embedImageSource(dataUrl);
       const rows = (await searchVector({
         data: {
