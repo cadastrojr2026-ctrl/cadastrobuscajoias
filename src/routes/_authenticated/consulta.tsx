@@ -484,7 +484,14 @@ function ConsultaPage() {
                   ? "peça(s) — mais recentes primeiro"
                   : "peça(s) mais parecida(s)"
                 : "peça(s) encontrada(s)"}
+              {mode === "image" && results.length < imageLimit && (
+                <span className="ml-1 text-[color:var(--gold)]/80">
+                  — não há {imageLimit} produtos disponíveis
+                  {category ? " nesta categoria" : ""}.
+                </span>
+              )}
             </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {[...results]
                 .sort((a, b) => {
