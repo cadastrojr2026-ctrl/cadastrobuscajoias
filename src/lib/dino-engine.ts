@@ -8,6 +8,8 @@
  * Este arquivo só pode ser importado dinamicamente em código de navegador.
  */
 
+import { ReindexError, withTimeout } from "./reindex-reliability";
+
 const MODEL_ID = "onnx-community/dinov2-with-registers-small";
 export const DINO_DIMS = 384;
 
@@ -17,6 +19,7 @@ type Loaded = {
     last_hidden_state: { data: Float32Array | number[]; dims: number[] };
   }>;
   fromURL: (url: string) => Promise<unknown>;
+  fromBlob: (blob: Blob) => Promise<unknown>;
 };
 
 let loading: Promise<Loaded> | null = null;
@@ -37,7 +40,7 @@ export function isModelReady() {
 
 export async function loadDino(): Promise<Loaded> {
   if (loading) return loading;
-  loading = (async () => {
+  const attempt = (async () => {
     const { AutoModel, AutoProcessor, RawImage, env } = await import("@huggingface/transformers");
     env.allowLocalModels = false;
     const device = await pickDevice();
@@ -50,17 +53,61 @@ export async function loadDino(): Promise<Loaded> {
       model: (inputs: Record<string, unknown>) =>
         (model as never as (i: unknown) => Promise<never>)(inputs),
       fromURL: (url: string) => RawImage.fromURL(url),
+      fromBlob: (blob: Blob) => RawImage.fromBlob(blob),
     } as Loaded;
   })();
+  loading = attempt.catch((err) => {
+    loading = null;
+    throw err;
+  });
   return loading;
 }
 
+async function fetchImage(src: string, timeoutMs?: number): Promise<Blob> {
+  const response = timeoutMs
+    ? await withTimeout((signal) => fetch(src, { signal }), timeoutMs, "download-imagem")
+    : await fetch(src);
+  if (!response.ok) {
+    if (response.status === 429 || response.status >= 500) {
+      throw new ReindexError("network", `Falha ao baixar a imagem (HTTP ${response.status})`);
+    }
+    throw new ReindexError("image", `Falha ao baixar a imagem (HTTP ${response.status})`);
+  }
+  return response.blob();
+}
+
 /** Gera o vetor visual de uma imagem (data URL ou URL http). */
-export async function embedImageSource(src: string): Promise<number[]> {
-  const { processor, model, fromURL } = await loadDino();
-  const image = await fromURL(src);
-  const inputs = await processor(image);
-  const out = await model(inputs);
+export async function embedImageSource(
+  src: string,
+  opts?: { timeoutMs?: number },
+): Promise<number[]> {
+  const { processor, model, fromBlob, fromURL } = await loadDino();
+  const blob = await fetchImage(src, opts?.timeoutMs);
+  let image: unknown;
+  try {
+    image = await fromBlob(blob);
+  } catch {
+    const url = URL.createObjectURL(blob);
+    try {
+      image = await fromURL(url);
+    } catch (err) {
+      throw new ReindexError("image", "Falha ao decodificar a imagem", err);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  let inputs: Record<string, unknown>;
+  try {
+    inputs = await processor(image);
+  } catch (err) {
+    throw new ReindexError("model", "Falha no pré-processamento do modelo DINOv2", err);
+  }
+  let out: { last_hidden_state: { data: Float32Array | number[]; dims: number[] } };
+  try {
+    out = await model(inputs);
+  } catch (err) {
+    throw new ReindexError("model", "Falha na inferência do modelo DINOv2", err);
+  }
   const hidden = out.last_hidden_state;
   const dim = hidden.dims[hidden.dims.length - 1];
   const raw = hidden.data as Float32Array | number[];
