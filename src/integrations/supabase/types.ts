@@ -187,6 +187,7 @@ export type Database = {
           }
       match_pieces_v2: {
         Args: {
+          ef_search?: number
           filter_category?: string
           match_count?: number
           query_embedding: string

@@ -33,43 +33,69 @@ export const searchByVectorV2 = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const pool = Math.min(80, Math.max(data.limit * 2, data.limit + 24));
+    // result_count = quantidade pedida pelo usuário (36/48/60)
+    // candidate_count = candidatos recuperados no banco, com folga para
+    // filtro de categoria, ranking e deduplicação por produto.
+    const resultCount = data.limit;
+    const candidateCount = Math.min(400, resultCount * 5);
+    // Profundidade de exploração do índice HNSW escolhida por teste
+    // comparativo (100/200/300/500): 100 já preenche as cotas de 36/48/60,
+    // com e sem categoria, com a menor latência.
+    const efSearch = 100;
 
-    const runs = await Promise.all(
-      data.vectors.map(async (v) => {
-        const { data: matches, error } = await context.supabase.rpc("match_pieces_v2", {
-          query_embedding: JSON.stringify(v.vector) as unknown as string,
-          match_count: pool,
-          filter_category: data.category ?? null,
-        } as never);
-        if (error) throw new Error(error.message);
-        return { weight: v.weight, rows: (matches ?? []) as MatchRow[] };
-      }),
-    );
-
-    // Fusão de rankings ponderada (RRF)
-    const scores = new Map<string, number>();
-    const best = new Map<string, MatchRow>();
-    for (const run of runs) {
-      run.rows.forEach((row, idx) => {
-        scores.set(row.id, (scores.get(row.id) ?? 0) + run.weight / (12 + idx));
-        const prev = best.get(row.id);
-        if (!prev || row.similarity > prev.similarity) best.set(row.id, row);
-      });
+    async function fetchRuns(candidates: number, ef: number) {
+      return await Promise.all(
+        data.vectors.map(async (v) => {
+          const { data: matches, error } = await context.supabase.rpc("match_pieces_v2", {
+            query_embedding: JSON.stringify(v.vector) as unknown as string,
+            match_count: candidates,
+            filter_category: data.category ?? null,
+            ef_search: ef,
+          } as never);
+          if (error) throw new Error(error.message);
+          return { weight: v.weight, rows: (matches ?? []) as MatchRow[] };
+        }),
+      );
     }
 
-    const seenProduct = new Set<string>();
-    const rows = [...scores.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([id]) => best.get(id)!)
-      .filter(Boolean)
-      .filter((r) => {
-        const key = r.product_code || r.code;
-        if (seenProduct.has(key)) return false;
-        seenProduct.add(key);
-        return true;
-      })
-      .slice(0, data.limit);
+    function rank(runs: Array<{ weight: number; rows: MatchRow[] }>) {
+      // Fusão de rankings ponderada (RRF)
+      const scores = new Map<string, number>();
+      const best = new Map<string, MatchRow>();
+      for (const run of runs) {
+        run.rows.forEach((row, idx) => {
+          scores.set(row.id, (scores.get(row.id) ?? 0) + run.weight / (12 + idx));
+          const prev = best.get(row.id);
+          if (!prev || row.similarity > prev.similarity) best.set(row.id, row);
+        });
+      }
+      // Uma peça por produto (várias fotos podem ser do mesmo product_code).
+      const seenProduct = new Set<string>();
+      return [...scores.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([id]) => best.get(id)!)
+        .filter(Boolean)
+        .filter((r) => {
+          const key = r.product_code || r.code;
+          if (seenProduct.has(key)) return false;
+          seenProduct.add(key);
+          return true;
+        });
+    }
+
+    let runs = await fetchRuns(candidateCount, efSearch);
+    let ranked = rank(runs);
+
+    // Segunda passada mais profunda apenas se faltarem produtos e ainda
+    // houver candidatos a explorar — nunca duplicando nem forçando itens.
+    const gotAllCandidates = runs.every((r) => r.rows.length < candidateCount);
+    if (ranked.length < resultCount && !gotAllCandidates) {
+      const deeper = Math.min(1000, candidateCount * 3);
+      runs = await fetchRuns(Math.min(500, deeper), Math.min(400, efSearch * 3));
+      ranked = rank(runs);
+    }
+
+    const rows = ranked.slice(0, resultCount);
 
     if (rows.length === 0) return [] as Array<MatchRow & { created_at: string | null }>;
     const ids = rows.map((r) => r.id);
@@ -81,6 +107,7 @@ export const searchByVectorV2 = createServerFn({ method: "POST" })
     for (const m of meta ?? []) map.set(m.id, m.created_at as unknown as string);
     return rows.map((r) => ({ ...r, created_at: map.get(r.id) ?? null }));
   });
+
 
 /** Progresso da reindexação (quantas peças já têm vetor no índice novo). */
 export const getIndexV2Stats = createServerFn({ method: "GET" })
