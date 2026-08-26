@@ -187,10 +187,33 @@ function ConsultaPage() {
       const dataUrl = await fileToDataUrl(file);
       setPreview(dataUrl);
       const { embedImageSource } = await import("@/lib/dino-engine");
+
+      // Foto original: captura a peça inteira (formato + cor + acabamento
+      // + fundo + luz), como sempre.
       const vector = await embedImageSource(dataUrl);
+      const vectors: Array<{ vector: number[]; weight: number }> = [{ vector, weight: 1 }];
+
+      // Reforço opcional: versão da mesma foto focada em FORMATO (remove
+      // cor/acabamento/fundo/luz — ver src/lib/image-prep.ts). Ajuda muito
+      // quando a foto é de peça bruta (sem banho) buscando no catálogo
+      // folheado. Mesmo motor DINOv2, 100% local no navegador — sem gastar
+      // crédito de IA. A fusão por RRF entre as duas consultas já existe
+      // no servidor (searchByVectorV2); só nunca tinha uma 2ª variante.
+      try {
+        const { normalizeForShapeSearch } = await import("@/lib/image-prep");
+        const shapeDataUrl = await normalizeForShapeSearch(dataUrl);
+        if (shapeDataUrl !== dataUrl) {
+          const shapeVector = await embedImageSource(shapeDataUrl);
+          vectors.push({ vector: shapeVector, weight: 1.35 });
+        }
+      } catch {
+        // Reforço de forma é opcional — qualquer falha aqui não deve
+        // impedir a busca normal com a foto original.
+      }
+
       const rows = (await searchVector({
         data: {
-          vectors: [{ vector, weight: 1 }],
+          vectors,
           limit: imageLimit,
           category: category || undefined,
         },
