@@ -16,6 +16,14 @@ dist-ssr
 .nitro
 *.local
 
+# Artefatos locais do experimento embedding_v2_shape (scripts/ab-shape) —
+# amostras/vetores/relatórios gerados, nunca versionados. *.local sozinho
+# não cobre nomes como "sample.local.json" (a extensão real é .json/.md,
+# não .local), daí as regras explícitas abaixo.
+scripts/ab-shape/data/
+*.local.json
+*.local.md
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

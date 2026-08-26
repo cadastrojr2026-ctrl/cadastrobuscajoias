@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <title>AB Shape Harness (uso interno do experimento — não faz parte do app)</title>
+  </head>
+  <body>
+    <p>
+      Página interna do experimento <code>embedding_v2_shape</code>. Não é uma rota do app,
+      não é linkada de lugar nenhum e não é servida em produção — existe só para o Playwright
+      (<code>scripts/ab-shape/02-embed-shape.mjs</code>) abrir localmente via
+      <code>vite dev</code> e chamar, sem alterações, o <code>normalizeForShapeSearch</code>
+      (<code>src/lib/image-prep.ts</code>) e o <code>embedImageSource</code>
+      (<code>src/lib/dino-engine.ts</code>) reais do projeto.
+    </p>
+    <div id="status">carregando…</div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
