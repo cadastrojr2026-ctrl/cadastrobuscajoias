@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireApprovedUser } from "@/integrations/supabase/require-approved";
 import { z } from "zod";
 
 /**
@@ -62,7 +62,7 @@ function r_code(r: Row) {
 }
 
 export const previewCodeCleanup = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const rows = await fetchAll(context.supabase);
@@ -81,7 +81,7 @@ export const previewCodeCleanup = createServerFn({ method: "GET" })
  * interrompem o restante do lote. Embeddings são preservados.
  */
 export const applyCodeCleanup = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({ limit: z.number().min(1).max(300).default(150) })

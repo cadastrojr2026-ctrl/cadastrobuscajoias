@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireApprovedUser } from "@/integrations/supabase/require-approved";
 import { z } from "zod";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/embeddings";
@@ -36,94 +36,13 @@ async function embedImage(dataUrl: string, hint: string): Promise<number[]> {
 const SHAPE_HINT =
   "Jewelry piece identification by GEOMETRY ONLY. The query may be an unplated raw casting (brass/silver-colored, matte) while the catalog item is the same model finished with gold plating. Match strictly on outline, silhouette, contour, proportions, structure, number and arrangement of elements, stone settings shape and layout. Completely ignore color, hue, metal tone, plating, polish, gloss, reflections, specular highlights, shadows, background and lighting.";
 
-type MatchRow = {
-  id: string;
-  code: string;
-  name: string | null;
-  image_path: string;
-  category: string | null;
-  product_code?: string | null;
-  similarity: number;
-};
-
-// PUBLIC-ISH: authenticated user can search
-export const searchByImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
-    z
-      .object({
-        imageDataUrl: z.string().min(20),
-        // versão da mesma foto normalizada no cliente (cinza, sem fundo/iluminação)
-        shapeDataUrl: z.string().min(20).optional(),
-        limit: z.number().min(1).max(80).default(36),
-        category: z.string().optional(),
-      })
-      .parse(i),
-  )
-  .handler(async ({ data, context }) => {
-    const variants: Array<{ url: string; weight: number }> = [
-      { url: data.imageDataUrl, weight: 1 },
-    ];
-    if (data.shapeDataUrl && data.shapeDataUrl !== data.imageDataUrl) {
-      variants.push({ url: data.shapeDataUrl, weight: 1.35 });
-    }
-
-    const pool = Math.min(80, Math.max(data.limit * 2, data.limit + 24));
-
-    const runs = await Promise.all(
-      variants.map(async (v) => {
-        const emb = await embedImage(v.url, SHAPE_HINT);
-        const { data: matches, error } = await context.supabase.rpc("match_pieces", {
-          query_embedding: emb as unknown as string,
-          match_count: pool,
-          filter_category: data.category ?? null,
-        } as never);
-        if (error) throw new Error(error.message);
-        return { weight: v.weight, rows: (matches ?? []) as MatchRow[] };
-      }),
-    );
-
-    // Fusão de rankings (RRF ponderada): favorece peças que aparecem bem
-    // colocadas tanto na foto original quanto na versão focada em formato.
-    const scores = new Map<string, number>();
-    const best = new Map<string, MatchRow>();
-    for (const run of runs) {
-      run.rows.forEach((row, idx) => {
-        scores.set(row.id, (scores.get(row.id) ?? 0) + run.weight / (12 + idx));
-        const prev = best.get(row.id);
-        if (!prev || row.similarity > prev.similarity) best.set(row.id, row);
-      });
-    }
-
-    // Várias fotos podem pertencer ao mesmo produto: mantém apenas a melhor
-    // ocorrência de cada produto no resultado.
-    const seenProduct = new Set<string>();
-    const rows = [...scores.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([id]) => best.get(id)!)
-      .filter(Boolean)
-      .filter((r) => {
-        const key = r.product_code || r.code;
-        if (seenProduct.has(key)) return false;
-        seenProduct.add(key);
-        return true;
-      })
-      .slice(0, data.limit);
-
-    if (rows.length === 0) return [] as Array<MatchRow & { created_at: string | null }>;
-    const ids = rows.map((r) => r.id);
-    const { data: meta } = await context.supabase
-      .from("pieces")
-      .select("id, created_at")
-      .in("id", ids);
-    const map = new Map<string, string>();
-    for (const m of meta ?? []) map.set(m.id, m.created_at as unknown as string);
-    return rows.map((r) => ({ ...r, created_at: map.get(r.id) ?? null }));
-  });
-
+// Nota: a busca por imagem em produção usa searchByVectorV2 (vector.functions.ts),
+// que roda 100% no navegador (DINOv2, sem custo de IA). O embedImage()/SHAPE_HINT
+// acima seguem em uso só como fallback em addPiece(), quando o cliente não envia
+// embeddingV2 (ex.: upload feito sem o motor local disponível).
 
 export const searchByText = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -148,7 +67,7 @@ export const searchByText = createServerFn({ method: "POST" })
 
 
 export const getMyRole = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("user_roles")
@@ -160,7 +79,7 @@ export const getMyRole = createServerFn({ method: "GET" })
   });
 
 export const listAllPieces = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) => z.object({ category: z.string().optional() }).optional().parse(i))
   .handler(async ({ data, context }) => {
     let query = context.supabase
@@ -174,7 +93,7 @@ export const listAllPieces = createServerFn({ method: "GET" })
   });
 
 export const countPieces = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("pieces").select("category");
     if (error) throw new Error(error.message);
@@ -189,7 +108,7 @@ export const countPieces = createServerFn({ method: "GET" })
 
 
 export const addPiece = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -274,7 +193,7 @@ export const addPiece = createServerFn({ method: "POST" })
  * Quando o código muda, o arquivo no armazenamento é movido junto.
  */
 export const renamePiece = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -352,7 +271,7 @@ export const renamePiece = createServerFn({ method: "POST" })
 
 export const deletePiece = createServerFn({ method: "POST" })
 
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: role } = await context.supabase.rpc("has_role", {

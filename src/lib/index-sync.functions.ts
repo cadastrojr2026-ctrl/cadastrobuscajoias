@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireApprovedUser } from "@/integrations/supabase/require-approved";
 import { z } from "zod";
 
 type SyncError = { code: string; message: string };
@@ -14,7 +14,7 @@ async function assertAdmin(context: { supabase: any; userId: string }) {
 
 /** Integridade do índice: peças sem embedding (fora da busca por imagem). */
 export const getIndexHealth = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     await assertAdmin(context);
 
@@ -51,7 +51,7 @@ export const getIndexHealth = createServerFn({ method: "GET" })
  * e não interrompem as demais.
  */
 export const syncIndexIncremental = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({

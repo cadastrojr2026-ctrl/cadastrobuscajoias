@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireApprovedUser } from "@/integrations/supabase/require-approved";
 import { z } from "zod";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -27,7 +28,7 @@ export const ensureMyApproval = createServerFn({ method: "POST" })
   });
 
 export const countPendingApprovals = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     const { data: role } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,
@@ -63,7 +64,7 @@ export const getMyApprovalStatus = createServerFn({ method: "GET" })
   });
 
 export const listApprovals = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z.object({ status: z.enum(["pending", "approved", "rejected"]).optional() }).optional().parse(i),
   )
@@ -84,7 +85,7 @@ export const listApprovals = createServerFn({ method: "GET" })
   });
 
 export const setApprovalStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({

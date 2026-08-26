@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireApprovedUser } from "@/integrations/supabase/require-approved";
 import { z } from "zod";
 
 export const listFavorites = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("favorites")
@@ -29,7 +29,7 @@ export const listFavorites = createServerFn({ method: "GET" })
   });
 
 export const listFavoriteIds = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("favorites")
@@ -40,7 +40,7 @@ export const listFavoriteIds = createServerFn({ method: "GET" })
   });
 
 export const addFavorite = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) => z.object({ pieceId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -51,7 +51,7 @@ export const addFavorite = createServerFn({ method: "POST" })
   });
 
 export const removeFavorite = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) => z.object({ pieceId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase

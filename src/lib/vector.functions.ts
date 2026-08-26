@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireApprovedUser } from "@/integrations/supabase/require-approved";
 import { z } from "zod";
 
 type MatchRow = {
@@ -19,7 +19,7 @@ const vectorSchema = z.array(z.number()).length(384);
  * O servidor não gera embeddings — apenas compara os vetores recebidos.
  */
 export const searchByVectorV2 = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -111,7 +111,7 @@ export const searchByVectorV2 = createServerFn({ method: "POST" })
 
 /** Progresso da reindexação (quantas peças já têm vetor no índice novo). */
 export const getIndexV2Stats = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.rpc("index_v2_stats" as never);
     if (error) throw new Error(error.message);
@@ -129,7 +129,7 @@ async function assertAdmin(context: { supabase: any; userId: string }) {
 
 /** Lote de peças ainda sem vetor no índice novo, com links temporários das fotos. */
 export const nextReindexBatch = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) => z.object({ size: z.number().min(1).max(100).default(50) }).parse(i))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
@@ -172,7 +172,7 @@ export const nextReindexBatch = createServerFn({ method: "POST" })
 
 /** Grava os vetores calculados no navegador. */
 export const saveVectorsV2 = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -193,7 +193,7 @@ export const saveVectorsV2 = createServerFn({ method: "POST" })
 
 /** Marca uma peça como não indexada (usado quando a foto muda). */
 export const clearVectorV2 = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireApprovedUser])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
