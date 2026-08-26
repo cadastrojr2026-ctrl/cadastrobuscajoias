@@ -90,6 +90,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Catálogo interno da JR Joias Folheadas. Consulte peças por código ou por foto com busca visual inteligente." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/45c9125a-cb2d-47e2-9b43-9c0531c26677" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/45c9125a-cb2d-47e2-9b43-9c0531c26677" },
+      // Cor da barra do navegador/app instalado, combinando com o tema escuro do site.
+      { name: "theme-color", content: "#0d0c0b" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -98,6 +100,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap",
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      // Ícone usado ao "Adicionar à Tela de Início" no iPhone/iPad.
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      // Ícones + metadados usados ao instalar como app (Android/Chrome/desktop).
+      { rel: "manifest", href: "/manifest.json" },
     ],
   }),
   shellComponent: RootShell,
