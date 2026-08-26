@@ -98,15 +98,6 @@ function SiteHeader({ isAdmin, onSignOut }: { isAdmin: boolean; onSignOut: () =>
 
   return (
     <header className="sticky top-0 z-30">
-      {/* Barra de contato */}
-      <div className="hidden md:block bg-[#f1eeec]">
-        <div className="mx-auto max-w-6xl px-6 py-2 text-center md:text-left">
-          <span className="text-[12px] font-medium tracking-wide text-[#2b2b2b]">
-            sac@jrjoiasfolheadas.com.br | (88) 4141-0019
-          </span>
-        </div>
-      </div>
-
       {/* Barra principal preta */}
       <div className="bg-black">
         <div className="mx-auto max-w-6xl px-4 md:px-6">

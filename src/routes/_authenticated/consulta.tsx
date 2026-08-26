@@ -266,70 +266,9 @@ function ConsultaPage() {
 
 
       {view === "search" && (<>
-      {/* Categories (alphabetical) */}
-      <div className="flex gap-2 justify-center mb-6 flex-wrap">
-
-        {CATEGORIES.map((c) => {
-          const Icon = c.icon;
-          const active = category === c.value;
-          return (
-            <button
-              key={c.value || "all"}
-              onClick={() => setCategory(c.value)}
-              className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm border transition ${
-                active
-                  ? "gold-gradient text-primary-foreground border-transparent shadow-md shadow-black/30"
-                  : "border-[color:var(--gold)]/30 text-foreground/80 hover:text-foreground hover:border-[color:var(--gold)]/60 bg-card/40"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {c.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Results-per-search */}
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <span className="text-xs text-muted-foreground">Resultados por busca:</span>
-        {LIMIT_OPTIONS.map((n) => (
-          <button
-            key={n}
-            onClick={() => setImageLimit(n)}
-            className={`rounded-full px-4 py-1 text-xs border transition ${
-              imageLimit === n
-                ? "gold-gradient text-primary-foreground border-transparent"
-                : "border-[color:var(--gold)]/30 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
-
-      {mode === "image" && (
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <span className="text-xs text-muted-foreground">Ordenar por:</span>
-          {([
-            { v: "similar", label: "Mais parecido" },
-            { v: "recent", label: "Mais recente" },
-          ] as const).map((o) => (
-            <button
-              key={o.v}
-              onClick={() => setSortMode(o.v)}
-              className={`rounded-full px-3 py-1 text-xs border transition ${
-                sortMode === o.v
-                  ? "gold-gradient text-primary-foreground border-transparent"
-                  : "border-[color:var(--gold)]/30 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Search inputs */}
+      {/* Search inputs — em primeiro lugar, antes dos filtros, pra quem
+          chega na página já ver logo onde buscar (sem rolar por 13 botões
+          de categoria primeiro). */}
       <div className="grid md:grid-cols-2 gap-4">
         {/* Text search */}
         <form
@@ -427,6 +366,69 @@ function ConsultaPage() {
           }}
         />
       </div>
+
+      {/* Categories (alphabetical) */}
+      <div className="flex gap-2 justify-center mt-8 mb-6 flex-wrap">
+
+        {CATEGORIES.map((c) => {
+          const Icon = c.icon;
+          const active = category === c.value;
+          return (
+            <button
+              key={c.value || "all"}
+              onClick={() => setCategory(c.value)}
+              className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm border transition ${
+                active
+                  ? "gold-gradient text-primary-foreground border-transparent shadow-md shadow-black/30"
+                  : "border-[color:var(--gold)]/30 text-foreground/80 hover:text-foreground hover:border-[color:var(--gold)]/60 bg-card/40"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Results-per-search */}
+      <div className="flex items-center justify-center gap-2 mb-6">
+        <span className="text-xs text-muted-foreground">Resultados por busca:</span>
+        {LIMIT_OPTIONS.map((n) => (
+          <button
+            key={n}
+            onClick={() => setImageLimit(n)}
+            className={`rounded-full px-4 py-1 text-xs border transition ${
+              imageLimit === n
+                ? "gold-gradient text-primary-foreground border-transparent"
+                : "border-[color:var(--gold)]/30 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+
+      {mode === "image" && (
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="text-xs text-muted-foreground">Ordenar por:</span>
+          {([
+            { v: "similar", label: "Mais parecido" },
+            { v: "recent", label: "Mais recente" },
+          ] as const).map((o) => (
+            <button
+              key={o.v}
+              onClick={() => setSortMode(o.v)}
+              className={`rounded-full px-3 py-1 text-xs border transition ${
+                sortMode === o.v
+                  ? "gold-gradient text-primary-foreground border-transparent"
+                  : "border-[color:var(--gold)]/30 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tip banner */}
       <div className="mt-8 rounded-2xl border border-[color:var(--gold)]/25 bg-card/60 overflow-hidden">
