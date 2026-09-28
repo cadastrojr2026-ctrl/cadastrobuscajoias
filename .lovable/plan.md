@@ -1,33 +1,32 @@
-# Teste A/B (embedding_v2_shape) — PAUSADO
+# Adicionar Pulseiras Grossas e Masculinas
 
-Status: **PAUSADO** (18/08/2026), a pedido do usuário.
+## Objetivo
+Adicionar as **250 fotos** enviadas ao catálogo na nova categoria **Pulseiras Grossas e Masculinas**, mantendo o funcionamento e o visual atuais do projeto.
 
-## Motivo da pausa
+## Conteúdo conferido
+- `PULSEIRA_GROSSA_MASCULINA.rar`: 66 imagens
+- `PULSEIRA_GROSSA_MASCULINA_-_2.rar`: 80 imagens
+- `PULSEIRA_GROSSA_MASCULINA_-_3.rar`: 104 imagens
+- Total: **250 imagens**
+- Não há códigos repetidos entre as três pastas.
 
-O usuário optou por fazer primeiro uma validação manual da qualidade da busca visual com fotos reais (peças brutas tiradas por celular vs. peças folheadas do catálogo). Caso sejam identificados problemas relevantes de precisão, o teste A/B será retomado posteriormente.
+## Implementação
+1. Extrair somente as imagens válidas dos três arquivos, ignorando arquivos auxiliares como `Thumbs.db`.
+2. Conferir todos os códigos das fotos contra o catálogo atual antes da gravação, evitando substituir peças existentes por engano.
+3. Cadastrar as imagens na nova categoria `pulseira_grossa_masculina`, com o nome visível **Pulseiras Grossas e Masculinas**.
+4. Gerar automaticamente o `embedding_v2` DINOv2 de 384 dimensões para cada nova imagem, pelo fluxo local e sem consumo de créditos de IA.
+5. Gravar cada imagem, seu código, categoria e vetor no fluxo existente. O índice HNSW incluirá as novas linhas automaticamente; não haverá reindexação geral.
+6. Adicionar a nova categoria, em ordem alfabética, nas áreas de Consulta e Admin, usando o ícone de pulseira já existente.
 
-## O que NÃO deve ser feito enquanto estiver pausado
+## Validação
+- Confirmar que 250 peças foram cadastradas, descontando somente eventuais códigos já existentes identificados na conferência completa.
+- Confirmar que todas as novas peças possuem `embedding_v2`.
+- Confirmar que o total do catálogo e o total da categoria estão corretos.
+- Testar busca por nome/código e busca visual filtrada pela nova categoria.
+- Confirmar que nenhuma peça, categoria ou vetor já existente foi alterado.
 
-- Não implementar a Fase 2.
-- Não gerar os 300 vetores de `embedding_v2_shape`.
-- Não criar a tabela temporária `ab_shape_vectors`.
-- Não fazer nenhuma reindexação.
-- Não alterar nenhum código ou banco de produção.
-- Não tocar em `embedding_v2`, índice HNSW, DINO, configuração de recuperação, tabela `pieces` ou produção.
-
-## Estado preservado
-
-- Fase 1 (correção de quantidade e recuperação): **ativa e validada**.
-- `embedding_v2` + índice HNSW + DINO: **inalterados**.
-- Pipeline de busca atual (`match_pieces_v2` + fusão RRF + dedup por `product_code`): **inalterado**.
-
-## Plano aprovado (referência)
-
-O plano técnico completo do teste A/B foi aprovado e está arquivado em:
-`.lovable/plan/plano-de-teste-a-b-precisão-visual-embedding-v2-vs-embedding-2026-08-18.md`
-
-## Retomada
-
-Retomar somente quando o usuário solicitar explicitamente, após a validação manual. Antes de retomar, confirmar novamente:
-1. Disponibilidade das ~40 fotos reais de peças brutas pareadas com o `product_code` da peça folheada.
-2. Autorização para criar a tabela temporária isolada `ab_shape_vectors` e gerar vetores de forma apenas para as 300 peças da amostra.
+## Limites preservados
+- Não implementar nem executar o teste A/B pausado.
+- Não criar `embedding_v2_shape`.
+- Não alterar a Fase 1, o DINO, a configuração de recuperação, o índice HNSW ou a tabela `pieces`.
+- Não executar reindexação geral.
