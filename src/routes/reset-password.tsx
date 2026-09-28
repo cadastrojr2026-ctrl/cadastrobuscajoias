@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reset-password")({
+  head: () => ({
+    meta: [
+      { title: "Redefinir senha | JR Joias Folheadas" },
+      { name: "description", content: "Defina uma nova senha para acessar a JR Joias Folheadas." },
+      { property: "og:title", content: "Redefinir senha | JR Joias Folheadas" },
+      { property: "og:description", content: "Defina uma nova senha para acessar a JR Joias Folheadas." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ResetPasswordPage,
 });
 

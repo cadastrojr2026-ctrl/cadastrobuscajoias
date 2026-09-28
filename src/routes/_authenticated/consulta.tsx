@@ -38,6 +38,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 
 export const Route = createFileRoute("/_authenticated/consulta")({
+  head: () => ({
+    meta: [
+      { title: "Consulta de Peças | JR Joias Folheadas" },
+      { name: "description", content: "Encontre peças da JR Joias Folheadas por foto, código ou nome." },
+      { property: "og:title", content: "Consulta de Peças | JR Joias Folheadas" },
+      { property: "og:description", content: "Encontre peças da JR Joias Folheadas por foto, código ou nome." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ConsultaPage,
 });
 
