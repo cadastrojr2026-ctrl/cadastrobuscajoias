@@ -60,6 +60,7 @@ const CATEGORIES = [
   { value: "gargantilha", label: "Gargantilhas" },
   { value: "pingente", label: "Pingentes" },
   { value: "pulseira_feminina", label: "Pulseiras Femininas" },
+  { value: "pulseira_grossa_masculina", label: "Pulseiras Grossas e Masculinas" },
   { value: "pulseira_infantil", label: "Pulseiras Infantis" },
 ] as const;
 

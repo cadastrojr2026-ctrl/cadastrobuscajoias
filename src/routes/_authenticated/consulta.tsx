@@ -67,6 +67,7 @@ const CATEGORIES = [
   { value: "gargantilha", label: "Gargantilhas", icon: NecklaceIcon },
   { value: "pingente", label: "Pingentes", icon: PendantIcon },
   { value: "pulseira_feminina", label: "Pulseiras Femininas", icon: BraceletIcon },
+  { value: "pulseira_grossa_masculina", label: "Pulseiras Grossas e Masculinas", icon: BraceletIcon },
   { value: "pulseira_infantil", label: "Pulseiras Infantis", icon: BraceletIcon },
 ] as const;
 
