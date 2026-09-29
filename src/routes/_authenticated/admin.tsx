@@ -35,6 +35,16 @@ import { applyCodeCleanup, previewCodeCleanup } from "@/lib/code-cleanup.functio
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  head: () => ({
+    meta: [
+      { title: "Painel Admin | JR Joias Folheadas" },
+      { name: "description", content: "Cadastre e gerencie o catálogo de peças da JR Joias Folheadas." },
+      { property: "og:title", content: "Painel Admin | JR Joias Folheadas" },
+      { property: "og:description", content: "Cadastre e gerencie o catálogo de peças da JR Joias Folheadas." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: AdminPage,
 });
 
@@ -60,6 +70,7 @@ const CATEGORIES = [
   { value: "gargantilha", label: "Gargantilhas" },
   { value: "pingente", label: "Pingentes" },
   { value: "pulseira_feminina", label: "Pulseiras Femininas" },
+  { value: "pulseira_grossa_masculina", label: "Pulseiras Grossas e Masculinas" },
   { value: "pulseira_infantil", label: "Pulseiras Infantis" },
 ] as const;
 

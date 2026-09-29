@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Search, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "JR Joias Folheadas | Cadastro e Consulta" },
+      { name: "description", content: "Consulte e cadastre peças da JR Joias Folheadas por código ou imagem." },
+      { property: "og:title", content: "JR Joias Folheadas | Cadastro e Consulta" },
+      { property: "og:description", content: "Consulte e cadastre peças da JR Joias Folheadas por código ou imagem." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: Landing,
 });
 

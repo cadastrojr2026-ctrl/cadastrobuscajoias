@@ -7,6 +7,16 @@ import { useServerFn } from "@tanstack/react-start";
 import { ensureMyApproval, getMyApprovalStatus } from "@/lib/approvals.functions";
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({
+    meta: [
+      { title: "Entrar | JR Joias Folheadas" },
+      { name: "description", content: "Acesse o catálogo e a consulta de peças da JR Joias Folheadas." },
+      { property: "og:title", content: "Entrar | JR Joias Folheadas" },
+      { property: "og:description", content: "Acesse o catálogo e a consulta de peças da JR Joias Folheadas." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: AuthPage,
 });
 
