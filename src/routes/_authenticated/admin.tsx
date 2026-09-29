@@ -172,9 +172,11 @@ function AdminPage() {
   const [renaming, setRenaming] = useState<Piece | null>(null);
   const [renameCode, setRenameCode] = useState("");
   const [renameName, setRenameName] = useState("");
+  const [renameCategory, setRenameCategory] = useState("");
 
   const renameMut = useMutation({
-    mutationFn: (v: { id: string; code: string; name?: string }) => renameFn({ data: v }),
+    mutationFn: (v: { id: string; code: string; name?: string; category?: string }) =>
+      renameFn({ data: v }),
     onSuccess: (r) => {
       toast.success(
         r.previousCode === r.code
@@ -192,6 +194,7 @@ function AdminPage() {
     setRenaming(p);
     setRenameCode(p.code);
     setRenameName(p.name ?? "");
+    setRenameCategory(p.category ?? "");
   }
 
 
@@ -818,6 +821,7 @@ function AdminPage() {
                   id: renaming.id,
                   code,
                   name: renameName.trim() || undefined,
+                  category: renameCategory || undefined,
                 });
               }}
               className="space-y-3"
@@ -839,6 +843,20 @@ function AdminPage() {
                   placeholder="Ex.: Pingente coração cravejado"
                   className="mt-1 w-full rounded-lg bg-background border border-[color:var(--gold)]/30 px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--gold)]"
                 />
+              </label>
+              <label className="block text-xs">
+                <span className="text-muted-foreground">Categoria</span>
+                <select
+                  value={renameCategory}
+                  onChange={(e) => setRenameCategory(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-background border border-[color:var(--gold)]/30 px-3 py-2 text-sm focus:outline-none focus:border-[color:var(--gold)]"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <div className="flex justify-end gap-2 pt-1">
                 <button

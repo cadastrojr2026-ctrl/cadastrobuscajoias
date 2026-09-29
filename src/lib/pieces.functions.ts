@@ -200,6 +200,7 @@ export const renamePiece = createServerFn({ method: "POST" })
         id: z.string().uuid(),
         code: z.string().min(1).max(50),
         name: z.string().max(120).optional(),
+        category: z.string().max(40).optional(),
       })
       .parse(i),
   )
@@ -252,11 +253,13 @@ export const renamePiece = createServerFn({ method: "POST" })
       name: string | null;
       image_path: string;
       product_code?: string;
+      category?: string;
     } = {
       code: newCode,
       name: newName,
       image_path: imagePath,
     };
+    if (data.category) patch.category = data.category;
     // Peça sem variantes: mantém o código de produto alinhado ao novo código.
     if (!piece.product_code || piece.product_code === piece.code) {
       patch.product_code = newCode;
