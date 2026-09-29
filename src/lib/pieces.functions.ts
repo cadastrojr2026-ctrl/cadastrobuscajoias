@@ -2,45 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireApprovedUser } from "@/integrations/supabase/require-approved";
 import { z } from "zod";
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/embeddings";
-
-async function embedImage(dataUrl: string, hint: string): Promise<number[]> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
-  const r = await fetch(GATEWAY, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-embedding-2",
-      input: [
-        {
-          content: [
-            { type: "text", text: hint },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    }),
-  });
-  if (!r.ok) {
-    const txt = await r.text();
-    throw new Error(`Embedding failed [${r.status}]: ${txt.slice(0, 300)}`);
-  }
-  const json = (await r.json()) as { data: Array<{ embedding: number[] }> };
-  return json.data[0].embedding;
-}
-
-const SHAPE_HINT =
-  "Jewelry piece identification by GEOMETRY ONLY. The query may be an unplated raw casting (brass/silver-colored, matte) while the catalog item is the same model finished with gold plating. Match strictly on outline, silhouette, contour, proportions, structure, number and arrangement of elements, stone settings shape and layout. Completely ignore color, hue, metal tone, plating, polish, gloss, reflections, specular highlights, shadows, background and lighting.";
-
-// Nota: a busca por imagem em produção usa searchByVectorV2 (vector.functions.ts),
-// que roda 100% no navegador (DINOv2, sem custo de IA). O embedImage()/SHAPE_HINT
-// acima seguem em uso só como fallback em addPiece(), quando o cliente não envia
-// embeddingV2 (ex.: upload feito sem o motor local disponível).
-
 export const searchByText = createServerFn({ method: "POST" })
   .middleware([requireApprovedUser])
   .inputValidator((i: unknown) =>
@@ -119,7 +80,7 @@ export const addPiece = createServerFn({ method: "POST" })
         category: z.string().max(40).optional(),
         imageDataUrl: z.string().min(20),
         // vetor visual calculado no navegador (índice v2, gratuito)
-        embeddingV2: z.array(z.number()).length(384).optional(),
+        embeddingV2: z.array(z.number()).length(384),
       })
       .parse(i),
   )
@@ -157,11 +118,6 @@ export const addPiece = createServerFn({ method: "POST" })
       await context.supabase.storage.from("pieces").remove([existing.image_path]);
     }
 
-    // Sem vetor do navegador, cai no gerador antigo (consome créditos de IA).
-    const legacyEmb = data.embeddingV2
-      ? null
-      : await embedImage(data.imageDataUrl, `${SHAPE_HINT} Catalog item code ${code}.`);
-
     const { error: insErr } = await context.supabase.from("pieces").upsert(
       {
         code,
@@ -169,10 +125,7 @@ export const addPiece = createServerFn({ method: "POST" })
         name: data.name ?? null,
         category: data.category ?? "anel",
         image_path: path,
-        ...(legacyEmb ? { embedding: legacyEmb as unknown as string } : {}),
-        ...(data.embeddingV2
-          ? { embedding_v2: JSON.stringify(data.embeddingV2) as unknown as string }
-          : {}),
+        embedding_v2: JSON.stringify(data.embeddingV2) as unknown as string,
         created_by: context.userId,
       },
       { onConflict: "code" },
