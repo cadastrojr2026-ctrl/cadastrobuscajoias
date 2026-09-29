@@ -13,6 +13,7 @@ import {
 import { listApprovals, setApprovalStatus } from "@/lib/approvals.functions";
 import { usePendingApprovals } from "@/hooks/use-pending-approvals";
 import { ReindexPanel } from "@/components/reindex-panel";
+import { SearchDiagnostic } from "@/components/search-diagnostic";
 
 import { getSignedImageUrls } from "@/lib/storage";
 import { toast } from "sonner";
@@ -407,6 +408,8 @@ function AdminPage() {
       </div>
 
       <ReindexPanel />
+
+      <SearchDiagnostic />
 
       {/* Relatório do último envio/remoção */}
       {syncReport && (

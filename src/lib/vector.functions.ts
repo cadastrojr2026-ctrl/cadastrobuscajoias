@@ -204,3 +204,74 @@ export const clearVectorV2 = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/**
+ * Diagnóstico de uma peça na busca por imagem (somente admin): informa se a
+ * peça tem vetor, se o índice consegue alcançá-la e em que posição ela fica
+ * para uma foto de consulta.
+ */
+export const diagnosePiece = createServerFn({ method: "POST" })
+  .middleware([requireApprovedUser])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        code: z.string().min(1).max(50),
+        vector: vectorSchema.optional(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const code = data.code.trim().toUpperCase();
+    const { data: piece, error } = await context.supabase
+      .from("pieces")
+      .select("id, code, product_code, category, image_path, embedding_v2")
+      .eq("code", code)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!piece) return { found: false as const, code };
+
+    const stored: number[] | null = piece.embedding_v2
+      ? (JSON.parse(piece.embedding_v2 as unknown as string) as number[])
+      : null;
+    const productKey = piece.product_code ?? piece.code;
+
+    async function rankFor(vec: number[], category: string | null) {
+      const { data: rows, error: e } = await context.supabase.rpc("match_pieces_v2", {
+        query_embedding: JSON.stringify(vec) as unknown as string,
+        match_count: 500,
+        filter_category: category,
+        ef_search: 400,
+      } as never);
+      if (e) throw new Error(e.message);
+      const list = (rows ?? []) as MatchRow[];
+      const idx = list.findIndex((r) => r.id === piece!.id);
+      return {
+        rank: idx >= 0 ? idx + 1 : null,
+        similarity: idx >= 0 ? list[idx].similarity : null,
+        top1: list[0]?.similarity ?? null,
+        top36: list[35]?.similarity ?? list[list.length - 1]?.similarity ?? null,
+        // outras fotos do mesmo produto acima desta (ocupam vagas antes da deduplicação)
+        sameProductAbove:
+          idx > 0 ? list.slice(0, idx).filter((r) => r.product_code === productKey).length : 0,
+      };
+    }
+
+    const self = stored ? await rankFor(stored, null) : null;
+    const query = data.vector
+      ? {
+          all: await rankFor(data.vector, null),
+          inCategory: await rankFor(data.vector, piece.category),
+        }
+      : null;
+
+    return {
+      found: true as const,
+      code: piece.code,
+      productCode: piece.product_code,
+      category: piece.category,
+      hasVector: !!stored,
+      self,
+      query,
+    };
+  });
