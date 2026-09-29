@@ -34,6 +34,7 @@ import {
   BraceletIcon,
 } from "@/components/jewelry-icons";
 import { toast } from "sonner";
+import { ImageCropper } from "@/components/image-cropper";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 
@@ -126,6 +127,8 @@ function ConsultaPage() {
   const [sortMode, setSortMode] = useState<SortMode>("similar");
   const [lightbox, setLightbox] = useState<{ piece: Piece; url: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // foto escolhida aguardando recorte antes da busca
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const favIdsQuery = useQuery({
     queryKey: ["favorite-ids"],
@@ -336,7 +339,7 @@ function ConsultaPage() {
               e.preventDefault();
               setDragOver(false);
               const f = e.dataTransfer.files?.[0];
-              if (f && f.type.startsWith("image/")) doImageSearch(f);
+              if (f && f.type.startsWith("image/")) setPendingFile(f);
             }}
             disabled={loading}
             className={`rounded-xl border-2 border-dashed transition flex items-center justify-center gap-3 py-4 px-5 text-left disabled:opacity-50 ${
@@ -360,7 +363,7 @@ function ConsultaPage() {
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) doImageSearch(f);
+            if (f) setPendingFile(f);
             e.target.value = "";
           }}
         />
@@ -372,11 +375,22 @@ function ConsultaPage() {
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) doImageSearch(f);
+            if (f) setPendingFile(f);
             e.target.value = "";
           }}
         />
       </div>
+
+      {pendingFile && (
+        <ImageCropper
+          file={pendingFile}
+          onCancel={() => setPendingFile(null)}
+          onConfirm={(f) => {
+            setPendingFile(null);
+            doImageSearch(f);
+          }}
+        />
+      )}
 
       {/* Categories (alphabetical) */}
       <div className="flex gap-2 justify-center mt-8 mb-6 flex-wrap">
