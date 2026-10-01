@@ -14,16 +14,34 @@ export const searchByText = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const q = data.q.trim();
+    // Vírgula, parênteses e aspas quebram a sintaxe do filtro .or() do PostgREST;
+    // % e _ são curingas do ilike. Remove todos para a busca ser literal.
+    const q = data.q.replace(/[,()%_*"\\]/g, " ").replace(/\s+/g, " ").trim();
+    if (!q) return [];
+    const upper = q.toUpperCase();
     let query = context.supabase
       .from("pieces")
-      .select("id, code, name, image_path, category")
-      .or(`code.ilike.%${q}%,name.ilike.%${q}%`)
-      .limit(data.limit);
+      .select("id, code, name, image_path, category, product_code")
+      .or(`code.ilike.%${q}%,product_code.ilike.%${q}%,name.ilike.%${q}%`)
+      .order("code", { ascending: true })
+      .limit(300);
     if (data.category) query = query.eq("category", data.category);
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    // Sem ordenação, o limite cortava resultados arbitrários e o código exato
+    // podia ficar de fora. Prioriza: código exato > começa com > produto > resto.
+    const score = (r: { code: string; product_code: string | null }) => {
+      const code = r.code.toUpperCase();
+      if (code === upper) return 0;
+      if (code.startsWith(upper)) return 1;
+      if ((r.product_code ?? "").toUpperCase() === upper) return 2;
+      return 3;
+    };
+    return (rows ?? [])
+      .map((r) => ({ r, s: score(r) }))
+      .sort((a, b) => a.s - b.s)
+      .slice(0, data.limit)
+      .map(({ r }) => r);
   });
 
 

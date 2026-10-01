@@ -170,3 +170,48 @@ export async function normalizeForShapeSearch(dataUrl: string): Promise<string> 
     return dataUrl;
   }
 }
+
+/**
+ * Variante "suavizada" da foto de consulta, para fotos tiradas de uma TELA
+ * (padrão moiré/linhas) ou muito granuladas. O modelo reduz a imagem sem filtro
+ * anti-serrilhado, então a textura da tela vira ruído dominante no vetor.
+ * Reduz em etapas (média de pixels), borra levemente e entrega um quadrado
+ * 448px com a peça inteira. Mantém cor — só remove a trama.
+ */
+export async function smoothForScreenPhoto(dataUrl: string): Promise<string> {
+  try {
+    const img = await loadImage(dataUrl);
+    let cur: HTMLCanvasElement | HTMLImageElement = img;
+    let cw = img.width;
+    let ch = img.height;
+    const target = 448;
+    while (Math.max(cw, ch) > target * 1.5) {
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(cw / 2));
+      c.height = Math.max(1, Math.round(ch / 2));
+      const cx = c.getContext("2d");
+      if (!cx) return dataUrl;
+      cx.imageSmoothingQuality = "high";
+      cx.drawImage(cur, 0, 0, c.width, c.height);
+      cur = c;
+      cw = c.width;
+      ch = c.height;
+    }
+    const out = document.createElement("canvas");
+    out.width = target;
+    out.height = target;
+    const octx = out.getContext("2d");
+    if (!octx) return dataUrl;
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0, 0, target, target);
+    const fit = target / Math.max(cw, ch);
+    const dw = Math.round(cw * fit);
+    const dh = Math.round(ch * fit);
+    octx.imageSmoothingQuality = "high";
+    octx.filter = "blur(2px)";
+    octx.drawImage(cur, (target - dw) / 2, (target - dh) / 2, dw, dh);
+    return out.toDataURL("image/jpeg", 0.92);
+  } catch {
+    return dataUrl;
+  }
+}

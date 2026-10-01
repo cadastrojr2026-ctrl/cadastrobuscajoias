@@ -202,9 +202,21 @@ function ConsultaPage() {
       setPreview(dataUrl);
       const { embedImageSource } = await import("@/lib/dino-engine");
       const vector = await embedImageSource(dataUrl);
+      // 2ª variante: foto suavizada (anti-moiré, para foto tirada de tela),
+      // fundida por RRF com a original. Se falhar, segue só com a original.
+      const vectors = [{ vector, weight: 1 }];
+      try {
+        const { smoothForScreenPhoto } = await import("@/lib/image-prep");
+        const smooth = await smoothForScreenPhoto(dataUrl);
+        if (smooth !== dataUrl) {
+          vectors.push({ vector: await embedImageSource(smooth), weight: 1 });
+        }
+      } catch (e) {
+        console.error(e);
+      }
       const rows = (await searchVector({
         data: {
-          vectors: [{ vector, weight: 1 }],
+          vectors,
           limit: imageLimit,
           category: category || undefined,
         },

@@ -25,6 +25,7 @@ export function ImageCropper({
   const [rect, setRect] = useState<Rect>({ x: 0.15, y: 0.15, w: 0.7, h: 0.7 });
   const boxRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const touched = useRef(false);
   const drag = useRef<{ mode: Mode; px: number; py: number; start: Rect } | null>(null);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export function ImageCropper({
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    touched.current = true;
     drag.current = { mode, px: e.clientX, py: e.clientY, start: rect };
   }
 
@@ -80,15 +82,37 @@ export function ImageCropper({
     const sy = Math.round(rect.y * nh);
     const sw = Math.max(1, Math.round(rect.w * nw));
     const sh = Math.max(1, Math.round(rect.h * nh));
+    // Moldura nunca movida: usa a foto inteira (o recorte padrão de 70% central
+    // cortaria a peça sem o usuário ter pedido).
+    if (!touched.current) {
+      onConfirm(file);
+      return;
+    }
+    // O modelo reduz e corta o CENTRO quadrado da imagem; um recorte retangular
+    // perderia as pontas da peça. Entrega um quadrado, com a peça inteira,
+    // completando as laterais com a cor média do recorte.
+    const side = Math.max(sw, sh);
     const canvas = document.createElement("canvas");
-    canvas.width = sw;
-    canvas.height = sh;
+    canvas.width = side;
+    canvas.height = side;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       onConfirm(file);
       return;
     }
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    const probe = document.createElement("canvas");
+    probe.width = 1;
+    probe.height = 1;
+    const pctx = probe.getContext("2d");
+    if (pctx) {
+      pctx.drawImage(img, sx, sy, sw, sh, 0, 0, 1, 1);
+      const [r, g, b] = pctx.getImageData(0, 0, 1, 1).data;
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+    } else {
+      ctx.fillStyle = "#ffffff";
+    }
+    ctx.fillRect(0, 0, side, side);
+    ctx.drawImage(img, sx, sy, sw, sh, Math.round((side - sw) / 2), Math.round((side - sh) / 2), sw, sh);
     canvas.toBlob(
       (blob) => {
         if (!blob) {

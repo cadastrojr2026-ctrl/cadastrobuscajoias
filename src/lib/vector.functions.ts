@@ -53,7 +53,12 @@ export const searchByVectorV2 = createServerFn({ method: "POST" })
             ef_search: ef,
           } as never);
           if (error) throw new Error(error.message);
-          return { weight: v.weight, rows: (matches ?? []) as MatchRow[] };
+          // A varredura HNSW "relaxed_order" pode devolver linhas levemente fora
+          // de ordem; reordena por similaridade antes de usar a posição no ranking.
+          const rows = ((matches ?? []) as MatchRow[])
+            .slice()
+            .sort((a, b) => b.similarity - a.similarity);
+          return { weight: v.weight, rows };
         }),
       );
     }
