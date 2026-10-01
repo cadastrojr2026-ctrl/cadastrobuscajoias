@@ -171,18 +171,21 @@ export function ImageCropper({
                 className="block max-h-[55vh] max-w-full rounded-md"
               />
             )}
-            {/* moldura: a sombra escurece o que fica de fora */}
-            <div
-              onPointerDown={(e) => begin(e, "move")}
-              className="absolute cursor-move border-2 border-[color:var(--gold)] touch-none"
-              style={{
-                left: pct(rect.x),
-                top: pct(rect.y),
-                width: pct(rect.w),
-                height: pct(rect.h),
-                boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
-              }}
-            />
+            {/* moldura: a sombra escurece o que fica de fora, mas só dentro da
+                foto (overflow-hidden) — antes cobria a tela toda, inclusive os botões */}
+            <div className="absolute inset-0 overflow-hidden rounded-md pointer-events-none">
+              <div
+                onPointerDown={(e) => begin(e, "move")}
+                className="absolute cursor-move border-2 border-[color:var(--gold)] touch-none pointer-events-auto"
+                style={{
+                  left: pct(rect.x),
+                  top: pct(rect.y),
+                  width: pct(rect.w),
+                  height: pct(rect.h),
+                  boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+                }}
+              />
+            </div>
             <div
               className={`${handle} cursor-nwse-resize`}
               style={{ left: pct(rect.x), top: pct(rect.y), transform: "translate(-50%,-50%)" }}
@@ -218,22 +221,22 @@ export function ImageCropper({
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <div className="relative z-10 mt-4 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
           <button
             onClick={onCancel}
-            className="rounded-lg border border-border px-4 py-2 text-xs text-muted-foreground hover:text-foreground"
+            className="col-span-2 rounded-lg border border-border px-4 py-3 text-sm text-foreground/80 hover:text-foreground sm:col-span-1 sm:py-2 sm:text-xs"
           >
             Cancelar
           </button>
           <button
             onClick={() => onConfirm(file)}
-            className="rounded-lg border border-[color:var(--gold)]/40 px-4 py-2 text-xs font-medium hover:bg-[color:var(--gold)]/10"
+            className="rounded-lg border-2 border-[color:var(--gold)] px-4 py-3 text-sm font-semibold text-foreground hover:bg-[color:var(--gold)]/10 sm:py-2 sm:text-xs"
           >
             Usar foto inteira
           </button>
           <button
             onClick={confirm}
-            className="flex items-center gap-2 rounded-lg gold-gradient px-4 py-2 text-xs font-semibold text-primary-foreground"
+            className="flex items-center justify-center gap-2 rounded-lg gold-gradient px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md shadow-black/30 sm:py-2 sm:text-xs"
           >
             <Search className="h-3.5 w-3.5" /> Buscar com recorte
           </button>
